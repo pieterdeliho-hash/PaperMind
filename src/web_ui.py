@@ -154,14 +154,16 @@ with tab1:
                             st.markdown(f"Page {img['page']} | Score: {img['score']:.3f}")
 
                             try:
-                                # Use current working directory (already set to project root)
-                                image_path = Path(img['path'])
+                                # Convert path to use forward slashes (POSIX) for cross-platform compatibility
+                                image_path_str = img['path'].replace('\\', '/')
+                                image_path = Path(image_path_str)
 
-                                # If path is relative, resolve from CWD
+                                # Make absolute if relative
                                 if not image_path.is_absolute():
-                                    image_path = Path.cwd() / image_path
+                                    project_root = Path.cwd()
+                                    image_path = project_root / image_path
 
-                                # Make sure it's absolute
+                                # Resolve and check existence
                                 image_path = image_path.resolve()
 
                                 if image_path.exists():
