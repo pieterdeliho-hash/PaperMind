@@ -1,0 +1,335 @@
+{
+  "timestamp": "2026-03-10T09:02:15.284344",
+  "num_queries": 10,
+  "retrieval_results": [
+    {
+      "query_id": 1,
+      "question": "What is the transformer architecture?",
+      "category": "architecture",
+      "difficulty": "easy",
+      "retrieval_time": 0.16486787796020508,
+      "top_relevance": 0.5070973634719849,
+      "mean_relevance": 0.4953482747077942,
+      "precision": 0.0,
+      "retrieved_papers": [
+        "Dilated Neighborhood Attention Transformer_2209.15001v3.pdf",
+        "TransMorph Transformer for unsupervised medical im_2111.10480v6.pdf",
+        "ResT An Efficient Transformer for Visual Recogniti_2105.13677v5.pdf"
+      ],
+      "expected_papers": [
+        "Attention Is All You Need"
+      ]
+    },
+    {
+      "query_id": 2,
+      "question": "How does self-attention work?",
+      "category": "mechanism",
+      "difficulty": "easy",
+      "retrieval_time": 0.03349423408508301,
+      "top_relevance": 0.5514703989028931,
+      "mean_relevance": 0.5428325533866882,
+      "precision": 0.0,
+      "retrieved_papers": [
+        "Improving Sample Quality of Diffusion Models Using_2210.00939v6.pdf",
+        "Beyond Self-attention External Attention using Two_2105.02358v2.pdf",
+        "Beyond Self-attention External Attention using Two_2105.02358v2.pdf"
+      ],
+      "expected_papers": [
+        "Attention Is All You Need"
+      ]
+    },
+    {
+      "query_id": 3,
+      "question": "What is BERT?",
+      "category": "architecture",
+      "difficulty": "easy",
+      "retrieval_time": 0.03054976463317871,
+      "top_relevance": 0.510968804359436,
+      "mean_relevance": 0.48968714475631714,
+      "precision": 3.0,
+      "retrieved_papers": [
+        "Transformers The End of History for NLP_2105.00813v2.pdf",
+        "BERT Pre-training of Deep Bidirectional Transforme_1810.04805.pdf",
+        "BERT Pre-training of Deep Bidirectional Transforme_1810.04805.pdf"
+      ],
+      "expected_papers": [
+        "BERT"
+      ]
+    },
+    {
+      "query_id": 4,
+      "question": "How do vision transformers process images?",
+      "category": "vision",
+      "difficulty": "medium",
+      "retrieval_time": 0.03422188758850098,
+      "top_relevance": 0.5549605488777161,
+      "mean_relevance": 0.5396702885627747,
+      "precision": 0.0,
+      "retrieved_papers": [
+        "Beyond Self-attention External Attention using Two_2105.02358v2.pdf",
+        "Flow-Guided Sparse Transformer for Video Deblurrin_2201.01893v3.pdf",
+        "Dilated Neighborhood Attention Transformer_2209.15001v3.pdf"
+      ],
+      "expected_papers": [
+        "An Image is Worth 16x16 Words"
+      ]
+    },
+    {
+      "query_id": 5,
+      "question": "What are the advantages of transformers over RNNs?",
+      "category": "comparison",
+      "difficulty": "medium",
+      "retrieval_time": 0.027291297912597656,
+      "top_relevance": 0.5063666105270386,
+      "mean_relevance": 0.5008828043937683,
+      "precision": 0.0,
+      "retrieved_papers": [
+        "Superiority of Multi-Head Attention in In-Context_2401.17426v1.pdf",
+        "Dilated Neighborhood Attention Transformer_2209.15001v3.pdf",
+        "Transformers in Time Series A Survey_2202.07125v5.pdf"
+      ],
+      "expected_papers": [
+        "Attention Is All You Need"
+      ]
+    },
+    {
+      "query_id": 6,
+      "question": "How does multi-head attention work?",
+      "category": "mechanism",
+      "difficulty": "medium",
+      "retrieval_time": 0.030192852020263672,
+      "top_relevance": 0.6107568144798279,
+      "mean_relevance": 0.59742271900177,
+      "precision": 0.0,
+      "retrieved_papers": [
+        "MoH Multi-Head Attention as Mixture-of-Head Attent_2410.11842v3.pdf",
+        "Repulsive Attention Rethinking Multi-head Attentio_2009.09364v2.pdf",
+        "Self-Attention as Distributional Projection A Unif_2511.13780v1.pdf"
+      ],
+      "expected_papers": [
+        "Attention Is All You Need"
+      ]
+    },
+    {
+      "query_id": 7,
+      "question": "What datasets are used for transformer training?",
+      "category": "data",
+      "difficulty": "medium",
+      "retrieval_time": 0.03197431564331055,
+      "top_relevance": 0.5398393869400024,
+      "mean_relevance": 0.5256898403167725,
+      "precision": 0.0,
+      "retrieved_papers": [
+        "Transformers in Time Series A Survey_2202.07125v5.pdf",
+        "Transformers in Time Series A Survey_2202.07125v5.pdf",
+        "Forgetting Transformer Softmax Attention with a Fo_2503.02130v2.pdf"
+      ],
+      "expected_papers": [
+        "BERT",
+        "GPT-3",
+        "An Image is Worth 16x16 Words"
+      ]
+    },
+    {
+      "query_id": 8,
+      "question": "Compare different vision transformer architectures",
+      "category": "comparison",
+      "difficulty": "hard",
+      "retrieval_time": 0.17644548416137695,
+      "top_relevance": 0.5500896573066711,
+      "mean_relevance": 0.5450067520141602,
+      "precision": 0.5,
+      "retrieved_papers": [
+        "Dilated Neighborhood Attention Transformer_2209.15001v3.pdf",
+        "MLP Can Be A Good Transformer Learner_2404.05657v1.pdf",
+        "MoH Multi-Head Attention as Mixture-of-Head Attent_2410.11842v3.pdf"
+      ],
+      "expected_papers": [
+        "An Image is Worth 16x16 Words",
+        "Swin Transformer"
+      ]
+    },
+    {
+      "query_id": 9,
+      "question": "How do efficient transformers reduce computational cost?",
+      "category": "optimization",
+      "difficulty": "hard",
+      "retrieval_time": 0.026343822479248047,
+      "top_relevance": 0.4943777024745941,
+      "mean_relevance": 0.47993502020835876,
+      "precision": 0.0,
+      "retrieved_papers": [
+        "Forgetting Transformer Softmax Attention with a Fo_2503.02130v2.pdf",
+        "Dilated Neighborhood Attention Transformer_2209.15001v3.pdf",
+        "Transformers in Time Series A Survey_2202.07125v5.pdf"
+      ],
+      "expected_papers": [
+        "Efficient Transformers"
+      ]
+    },
+    {
+      "query_id": 10,
+      "question": "What is cross-attention and how is it used?",
+      "category": "mechanism",
+      "difficulty": "medium",
+      "retrieval_time": 0.025801897048950195,
+      "top_relevance": 0.5602400898933411,
+      "mean_relevance": 0.5250405073165894,
+      "precision": 0.0,
+      "retrieved_papers": [
+        "Self-Attention as Distributional Projection A Unif_2511.13780v1.pdf",
+        "MoH Multi-Head Attention as Mixture-of-Head Attent_2410.11842v3.pdf",
+        "An Extendable Efficient and Effective Transformer-_2204.07962v1.pdf"
+      ],
+      "expected_papers": [
+        "Attention Is All You Need"
+      ]
+    }
+  ],
+  "e2e_results": [
+    {
+      "query_id": 1,
+      "question": "What is the transformer architecture?",
+      "total_latency": 3.931349515914917,
+      "retrieval_latency": 0.030575275421142578,
+      "llm_latency": 3.9007742404937744,
+      "tokens_used": 1870,
+      "answer_length": 669,
+      "text_citations": 2,
+      "figure_citations": 0,
+      "answer": "The transformer architecture described in the text is a modified Swin Transformer used for affine registration in medical image analysis [Text Source 2]. This architecture takes two 3D volumes as inputs and generates 12 affine parameters, including rotation angles, translation parameters, scaling parameters, and shearing parameters. The architecture of this Transformer-based affine network is illustrated in Figure A.19 in the Appendix [Text Source 2]. This modified Swin Transformer is specifically designed for affine registration tasks due to the relative simplicity of affine transformations in comparison to more complex deformable image registration processes."
+    },
+    {
+      "query_id": 2,
+      "question": "How does self-attention work?",
+      "total_latency": 5.249001741409302,
+      "retrieval_latency": 0.022227764129638672,
+      "llm_latency": 5.226773977279663,
+      "tokens_used": 2001,
+      "answer_length": 1568,
+      "text_citations": 4,
+      "figure_citations": 0,
+      "answer": "Self-attention works by linearly projecting an input feature map into query, key, and value matrices. The attention matrix is then calculated based on the pairwise affinity between elements, which determines the similarity between different elements in the input. The output is obtained by multiplying the attention matrix with the value matrix, resulting in a refined feature representation of the input [Text Source 2].\n\nSelf-attention can be simplified to calculate an attention map directly from the input features, where the attention map is computed based on pixel-wise similarity in the feature space. The refined feature representation is then obtained by multiplying the attention map with the input features [Text Source 2].\n\nSelf-attention can be computationally intensive due to its quadratic complexity in the number of input pixels, making direct application to images impractical. To address this, previous work has utilized self-attention on patches rather than pixels to reduce computational complexity [Text Source 2].\n\nIn contrast to self-attention, external attention introduces a novel attention module that computes attention between input pixels and an external memory unit. This external memory unit acts as a memory of the entire training dataset, enabling attention to be computed between input pixels and this learned dataset-level prior knowledge. External attention enhances the flexibility of attention mechanisms by considering relationships between elements in different samples, beyond just within a single data sample [Text Source 3]."
+    },
+    {
+      "query_id": 3,
+      "question": "What is BERT?",
+      "total_latency": 3.8667569160461426,
+      "retrieval_latency": 0.020147323608398438,
+      "llm_latency": 3.846609592437744,
+      "tokens_used": 1685,
+      "answer_length": 978,
+      "text_citations": 3,
+      "figure_citations": 0,
+      "answer": "BERT stands for Bidirectional Encoder Representations from Transformers. It is a pre-trained deep learning model introduced in the paper \"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding\" [Text Source 2]. BERT is designed to understand the context of words in a sentence by considering the full sentence bidirectionally. It has been shown to outperform previous state-of-the-art models on various natural language processing tasks [Text Source 2]. BERT utilizes a transformer architecture, which is a type of neural network architecture that has been successful in capturing long-range dependencies in sequential data. \n\nFor a visual representation of how BERT processes input data for a question-answering task, Figure 1 from the paper \"BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding\" [Text Source 2] illustrates how BERT represents the input question and passage as a single packed sequence during fine-tuning."
+    },
+    {
+      "query_id": 4,
+      "question": "How do vision transformers process images?",
+      "total_latency": 2.7572269439697266,
+      "retrieval_latency": 0.019867897033691406,
+      "llm_latency": 2.737359046936035,
+      "tokens_used": 1951,
+      "answer_length": 1121,
+      "text_citations": 0,
+      "figure_citations": 0,
+      "answer": "Vision transformers process images by breaking down the input image into smaller non-overlapping sub-windows, which are then fed into the transformer model for processing. This approach helps reduce the computational cost of self-attention, making the time and space complexity linear with respect to the image resolution. Additionally, vision transformers may utilize local attention mechanisms to handle higher resolution images more efficiently.\n\nHierarchical vision transformers, such as the Swin Transformer, consist of multiple levels of transformer encoders with downsampling modules in between. These transformers use window self-attention modules that localize self-attention to sub-windows, allowing for out-of-window interactions and expanding the receptive field. The Swin Transformer, for example, employs a pixel-shifted Window Self Attention (SWSA) mechanism to enhance performance efficiently.\n\nFigure 1 from the Vicinity Vision Transformer paper could provide a visual representation of how vision transformers process images by breaking them down into sub-windows and applying self-attention mechanisms."
+    },
+    {
+      "query_id": 5,
+      "question": "What are the advantages of transformers over RNNs?",
+      "total_latency": 3.280202627182007,
+      "retrieval_latency": 0.024237632751464844,
+      "llm_latency": 3.255964994430542,
+      "tokens_used": 2009,
+      "answer_length": 1315,
+      "text_citations": 3,
+      "figure_citations": 0,
+      "answer": "Transformers have several advantages over RNNs. One key advantage is that transformers, such as the vanilla Transformer model, do not rely on recurrence like RNNs. Instead, they utilize mechanisms like multi-head self-attention modules and position-wise feed-forward networks [Text Source 3]. This lack of recurrence allows transformers to capture long-range dependencies more effectively and in parallel, making them more efficient for processing sequential data compared to RNNs.\n\nAdditionally, transformers can handle input sequences of variable length without the need for padding, which is a common requirement in RNNs. The positional encoding used in transformers helps model the sequence information without the need for explicit recurrence [Text Source 3].\n\nFurthermore, transformers have shown superior performance in various tasks, including natural language processing, computer vision, and time series modeling. For example, Swin Transformer in computer vision tasks and GPT-3 in natural language processing have demonstrated state-of-the-art performance [Text Source 2].\n\nOverall, the advantages of transformers over RNNs include their ability to capture long-range dependencies efficiently, handle variable-length sequences without padding, and achieve state-of-the-art performance in various domains."
+    },
+    {
+      "query_id": 6,
+      "question": "How does multi-head attention work?",
+      "total_latency": 3.818519115447998,
+      "retrieval_latency": 0.024315357208251953,
+      "llm_latency": 3.794203758239746,
+      "tokens_used": 1865,
+      "answer_length": 835,
+      "text_citations": 3,
+      "figure_citations": 0,
+      "answer": "Multi-head attention works by extending single-head attention to multiple parallel attention heads, allowing a model to jointly attend to information from different perspectives [Text Source 2]. Each attention head independently computes queries, keys, and values, which are then concatenated and linearly recombined to produce the final output [Text Source 3]. This mechanism enables the model to capture diverse attentive information and enhance its representational power. Multi-head attention is commonly used in deep neural networks for various natural language processing tasks, where it has shown impressive performance gains [Text Source 2].\n\nFigure 2 could potentially illustrate the concept of multi-head attention by showing a visual representation of how attention is distributed across different heads in a neural network."
+    },
+    {
+      "query_id": 7,
+      "question": "What datasets are used for transformer training?",
+      "total_latency": 2.1478681564331055,
+      "retrieval_latency": 0.02241349220275879,
+      "llm_latency": 2.1254546642303467,
+      "tokens_used": 1822,
+      "answer_length": 392,
+      "text_citations": 0,
+      "figure_citations": 0,
+      "answer": "The text excerpts do not provide specific information about the datasets used for transformer training. The focus of the text is on discussing various aspects of Transformers in time series modeling, such as architecture variants, pre-training, and hyperparameter optimization. For details on the datasets used for transformer training, additional information or data sources would be needed."
+    },
+    {
+      "query_id": 8,
+      "question": "Compare different vision transformer architectures",
+      "total_latency": 3.952559471130371,
+      "retrieval_latency": 0.026871919631958008,
+      "llm_latency": 3.925687551498413,
+      "tokens_used": 2045,
+      "answer_length": 1786,
+      "text_citations": 3,
+      "figure_citations": 0,
+      "answer": "In the realm of vision transformer architectures, there are several approaches that have been explored to enhance performance in dense vision tasks. Two notable architectures discussed in the provided text excerpts are the plain Vision Transformers (ViTs) and hierarchical vision transformers like Swin Transformer.\n\nPlain ViTs are known for their fixed dimensionality throughout the model, which leads to aggressive downsampling of inputs from the beginning to mitigate the quadratic cost of self-attention. This downsampling can hinder their effectiveness as backbones for dense vision tasks [Text Source 1]. On the other hand, hierarchical vision transformers, such as Swin Transformer, address this issue by incorporating multiple levels of transformer encoders with downsampling modules in between. These hierarchical models employ less aggressive initial downsampling and certain local attention mechanisms to handle higher resolution images more efficiently [Text Source 1].\n\nSwin Transformer, for example, utilizes a Window Self Attention (WSA) module and a pixel-shifted Window Self Attention (SWSA) module to localize self-attention to non-overlapping sub-windows, reducing the computational cost of self-attention. This design choice allows for linear time and space complexity with respect to resolution, making it more scalable for dense vision tasks [Text Source 1].\n\nTo further compare different vision transformer architectures, it would be beneficial to delve into specific performance metrics, computational efficiency, and scalability across various vision tasks. Figures illustrating the architecture of different vision transformers or showcasing their performance on specific tasks could provide additional insights into their comparative strengths and weaknesses."
+    },
+    {
+      "query_id": 9,
+      "question": "How do efficient transformers reduce computational cost?",
+      "total_latency": 3.622060537338257,
+      "retrieval_latency": 0.022951602935791016,
+      "llm_latency": 3.599108934402466,
+      "tokens_used": 1971,
+      "answer_length": 1305,
+      "text_citations": 4,
+      "figure_citations": 0,
+      "answer": "Efficient transformers reduce computational cost by employing strategies such as hierarchical structures and local attention mechanisms. For example, hierarchical vision transformers like Swin Transformer utilize Window Self Attention (WSA) and pixel-shifted Window Self Attention (SWSA) modules to localize self attention to non-overlapping sub-windows, reducing the cost of self attention and making the time and space complexity linear with respect to resolution [Text Source 2]. These mechanisms allow for more efficient processing of input data, reducing the computational burden associated with traditional transformers that have fixed dimensionality throughout the model and aggressive downsampling [Text Source 2]. Additionally, Swin Transformer's design involves relatively cheap and easily parallelizable operations, contributing to its efficiency in handling large-scale vision tasks [Text Source 2].\n\nEfficient transformers also optimize components such as QK-norm and KV-shift, which can impact computational efficiency [Text Source 1]. By incorporating these strategies and optimizations, efficient transformers are able to reduce computational costs while maintaining performance levels, making them suitable for a wide range of applications in machine learning and artificial intelligence."
+    },
+    {
+      "query_id": 10,
+      "question": "What is cross-attention and how is it used?",
+      "total_latency": 3.9980382919311523,
+      "retrieval_latency": 0.030439138412475586,
+      "llm_latency": 3.9675991535186768,
+      "tokens_used": 1768,
+      "answer_length": 1306,
+      "text_citations": 3,
+      "figure_citations": 0,
+      "answer": "Cross-attention is a mechanism in transformer models where queries come from one sequence (e.g., target side) and keys/values come from another sequence (e.g., source side). In the context of encoder-decoder models, cross-attention involves mapping the relational structure of the source sequence to the subspace defined by the target sequence. This is achieved through a specific algebraic operation involving queries, keys, and values from the source and target representations [Text Source 1].\n\nCross-attention is used to selectively focus on different patterns or relationships between elements in the source and target sequences. It allows the model to capture dependencies, coreferences, topical cohesion, discourse linkage, and other relevant information between the two sequences. By performing an asymmetric mapping from the relational structure of the source sequence to the target sequence's subspace, cross-attention helps in generating meaningful representations for tasks like machine translation and sequence-to-sequence learning [Text Source 1].\n\nFor a visualization of cross-attention, Figure 1 in the text [Text Source 3] provides an example of attention maps for cross-attention with ViDT (Swin-nano), showcasing how attention is distributed across different query IDs in an input image."
+    }
+  ],
+  "aggregate_metrics": {
+    "retrieval": {
+      "mean_precision": 0.35,
+      "mean_top_relevance": 0.5386167764663696,
+      "mean_avg_relevance": 0.524151623249054,
+      "mean_retrieval_time": 0.058118343353271484,
+      "p50_retrieval_time": 0.03126204013824463,
+      "p95_retrieval_time": 0.1712355613708496
+    },
+    "end_to_end": {
+      "mean_total_latency": 3.6623583316802977,
+      "p50_total_latency": 3.8426380157470703,
+      "p95_total_latency": 4.686068189144133,
+      "mean_llm_latency": 3.637953591346741,
+      "mean_tokens": 1898.7,
+      "mean_answer_length": 1127.5,
+      "mean_text_citations": 2.5,
+      "mean_figure_citations": 0.0
+    },
+    "cost": {
+      "avg_cost_per_query": 0.0037974000000000003,
+      "total_eval_cost": 0.037974
+    }
+  }
+}

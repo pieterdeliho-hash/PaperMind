@@ -1,0 +1,74 @@
+{
+  "queries": [
+    {
+      "id": 1,
+      "question": "What is the transformer architecture?",
+      "category": "architecture",
+      "expected_papers": ["Attention Is All You Need"],
+      "difficulty": "easy"
+    },
+    {
+      "id": 2,
+      "question": "How does self-attention work?",
+      "category": "mechanism",
+      "expected_papers": ["Attention Is All You Need"],
+      "difficulty": "easy"
+    },
+    {
+      "id": 3,
+      "question": "What is BERT?",
+      "category": "architecture",
+      "expected_papers": ["BERT"],
+      "difficulty": "easy"
+    },
+    {
+      "id": 4,
+      "question": "How do vision transformers process images?",
+      "category": "vision",
+      "expected_papers": ["An Image is Worth 16x16 Words"],
+      "difficulty": "medium"
+    },
+    {
+      "id": 5,
+      "question": "What are the advantages of transformers over RNNs?",
+      "category": "comparison",
+      "expected_papers": ["Attention Is All You Need"],
+      "difficulty": "medium"
+    },
+    {
+      "id": 6,
+      "question": "How does multi-head attention work?",
+      "category": "mechanism",
+      "expected_papers": ["Attention Is All You Need"],
+      "difficulty": "medium"
+    },
+    {
+      "id": 7,
+      "question": "What datasets are used for transformer training?",
+      "category": "data",
+      "expected_papers": ["BERT", "GPT-3", "An Image is Worth 16x16 Words"],
+      "difficulty": "medium"
+    },
+    {
+      "id": 8,
+      "question": "Compare different vision transformer architectures",
+      "category": "comparison",
+      "expected_papers": ["An Image is Worth 16x16 Words", "Swin Transformer"],
+      "difficulty": "hard"
+    },
+    {
+      "id": 9,
+      "question": "How do efficient transformers reduce computational cost?",
+      "category": "optimization",
+      "expected_papers": ["Efficient Transformers"],
+      "difficulty": "hard"
+    },
+    {
+      "id": 10,
+      "question": "What is cross-attention and how is it used?",
+      "category": "mechanism",
+      "expected_papers": ["Attention Is All You Need"],
+      "difficulty": "medium"
+    }
+  ]
+}

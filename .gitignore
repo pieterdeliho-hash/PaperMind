@@ -1,0 +1,24 @@
+# Virtual environment
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# Data files (PDFs are large)
+data/papers/*.pdf
+
+# Environment variables
+.env
+.streamlit/secrets.toml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

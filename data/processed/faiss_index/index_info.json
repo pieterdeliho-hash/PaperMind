@@ -1,0 +1,5 @@
+{
+  "num_vectors": 3431,
+  "embedding_dim": 384,
+  "index_type": "IndexFlatL2"
+}
