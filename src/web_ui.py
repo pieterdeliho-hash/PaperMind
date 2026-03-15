@@ -154,7 +154,7 @@ with tab1:
                             st.markdown(f"Page {img['page']} | Score: {img['score']:.3f}")
 
                             try:
-                                # Convert path to use forward slashes (POSIX) for cross-platform compatibility
+                                # Convert path for cross-platform compatibility
                                 image_path_str = img['path'].replace('\\', '/')
                                 image_path = Path(image_path_str)
 
@@ -167,8 +167,9 @@ with tab1:
                                 image_path = image_path.resolve()
 
                                 if image_path.exists():
-                                    image = Image.open(str(image_path))
-                                    st.image(image, use_container_width=True)
+                                    # Open and display image
+                                    with Image.open(str(image_path)) as img_obj:
+                                        st.image(img_obj, use_column_width=True)
                                 else:
                                     st.warning(f"Image not found: {image_path}")
                             except Exception as e:
