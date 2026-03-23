@@ -7,11 +7,13 @@ import json
 import numpy as np
 from pathlib import Path
 from PIL import Image
+import pickle
 import torch
 import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
 from tqdm import tqdm
 import time
+
 
 class ImageEmbeddingGenerator:
     """Generate CLIP embeddings for images"""
@@ -71,7 +73,7 @@ class ImageEmbeddingGenerator:
 
     def generate_all_embeddings(
         self,
-        metadata_path: str = "data/processed/images/images_metadata.json",
+        metadata_path: str = "data/processed/faiss_image_index/images_metadata.pkl",
         output_path: str = "data/processed/image_embeddings.json"
     ):
         """Generate embeddings for all extracted images"""
@@ -83,13 +85,41 @@ class ImageEmbeddingGenerator:
         # Check metadata exists
         if not Path(metadata_path).exists():
             print(f"ERROR: Metadata not found: {metadata_path}")
+            print(f"Tried: {metadata_path}")
+
+            # Try alternative paths
+            alt_paths = [
+                "data/processed/images/images_metadata.json",
+                "data/processed/faiss_image_index/images_metadata.pkl"
+            ]
+
+            for alt_path in alt_paths:
+                if Path(alt_path).exists():
+                    print(f"Found alternative: {alt_path}")
+                    metadata_path = alt_path
+                    break
+            else:
+                print("ERROR: No metadata file found!")
+                return None
+
+        # Load metadata (support both JSON and PKL)
+        print(f"Loading metadata from: {metadata_path}")
+
+        if metadata_path.endswith('.pkl'):
+            with open(metadata_path, 'rb') as f:
+                metadata = pickle.load(f)
+        else:
+            with open(metadata_path, 'r') as f:
+                metadata = json.load(f)
+
+        # Handle different metadata formats
+        if isinstance(metadata, dict) and 'images' in metadata:
+            images = metadata['images']
+        elif isinstance(metadata, list):
+            images = metadata
+        else:
+            print(f"ERROR: Unexpected metadata format: {type(metadata)}")
             return None
-
-        # Load metadata
-        with open(metadata_path, 'r') as f:
-            metadata = json.load(f)
-
-        images = metadata['images']
 
         if len(images) == 0:
             print("ERROR: No images in metadata!")
@@ -106,7 +136,11 @@ class ImageEmbeddingGenerator:
         start_time = time.time()
 
         for img_meta in tqdm(images, desc="Generating embeddings"):
-            img_path = Path(img_meta['path'])
+            # Handle different metadata structures
+            if isinstance(img_meta, dict):
+                img_path = Path(img_meta.get('path', img_meta.get('filepath', '')))
+            else:
+                img_path = Path(str(img_meta))
 
             if not img_path.exists():
                 failed += 1
@@ -134,9 +168,9 @@ class ImageEmbeddingGenerator:
         print(f"Total: {len(images)}")
         print(f"Success: {len(embeddings)}")
         print(f"Failed: {failed}")
-        print(f"Rate: {len(embeddings)/len(images)*100:.1f}%")
+        print(f"Rate: {len(embeddings) / len(images) * 100:.1f}%")
         print(f"Time: {elapsed:.1f}s")
-        print(f"Speed: {len(embeddings)/elapsed:.1f} imgs/s")
+        print(f"Speed: {len(embeddings) / elapsed:.1f} imgs/s")
         print(f"Shape: {embeddings_array.shape}")
 
         # Save

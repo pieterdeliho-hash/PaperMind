@@ -8,13 +8,6 @@ __pycache__/
 # PDFs (too large)
 data/papers/*.pdf
 
-# Large embeddings (regenerate on deployment)
-data/processed/embeddings_*.json
-data/processed/embeddings_*.npy
-data/processed/image_embeddings.json
-data/processed/image_embeddings.npy
-data/processed/chunks_recursive_1024.json
-
 # Evaluation data
 data/evaluation/
 
@@ -31,3 +24,10 @@ Thumbs.db
 
 # Tests
 tests/
+
+# Large JSON files (we use .npy instead)
+data/processed/embeddings_*.json
+data/processed/image_embeddings.json
+
+# Actual image files (too large, embeddings are enough)
+data/processed/images/*.png
