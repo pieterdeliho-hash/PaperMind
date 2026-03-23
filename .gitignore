@@ -1,16 +1,24 @@
-# Virtual environment
-venv/
-
 # Python
+venv/
 __pycache__/
 *.py[cod]
 *.so
 .Python
 
-# Data files (PDFs are large)
+# PDFs (too large)
 data/papers/*.pdf
 
-# Environment variables
+# Large embeddings (regenerate on deployment)
+data/processed/embeddings_*.json
+data/processed/embeddings_*.npy
+data/processed/image_embeddings.json
+data/processed/image_embeddings.npy
+data/processed/chunks_recursive_1024.json
+
+# Evaluation data
+data/evaluation/
+
+# Environment secrets
 .env
 .streamlit/secrets.toml
 
@@ -18,7 +26,8 @@ data/papers/*.pdf
 .vscode/
 .idea/
 *.swp
-
-# OS
 .DS_Store
 Thumbs.db
+
+# Tests
+tests/

@@ -81,28 +81,28 @@ class StrategicPaperDownloader:
 
         queries = [
             # Core transformer architectures
-            ("transformer architecture", 5),
-            ("BERT language model", 3),
-            ("GPT language model", 3),
+            ("transformer architecture", 10),
+            ("BERT language model", 10),
+            ("GPT language model", 10),
 
             # Vision transformers
-            ("vision transformer image", 5),
-            ("ViT image classification", 3),
+            ("vision transformer image", 10),
+            ("ViT image classification", 10),
 
             # Attention mechanisms
-            ("self-attention mechanism", 4),
-            ("multi-head attention", 3),
-            ("cross-attention transformer", 3),
+            ("self-attention mechanism", 10),
+            ("multi-head attention", 10),
+            ("cross-attention transformer", 10),
 
             # Applications
-            ("transformer NLP", 4),
-            ("transformer computer vision", 4),
-            ("transformer time series", 3),
+            ("transformer NLP", 10),
+            ("transformer computer vision", 10),
+            ("transformer time series", 10),
 
             # Recent advances
-            ("efficient transformer", 3),
-            ("linear attention", 3),
-            ("sparse transformer", 3),
+            ("efficient transformer", 10),
+            ("linear attention", 10),
+            ("sparse transformer", 10),
         ]
 
         print("=" * 70)

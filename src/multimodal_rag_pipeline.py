@@ -160,104 +160,36 @@ class MultiModalRAG:
 
         return text_results, image_results
 
-    def generate_answer(
-            self,
-            query: str,
-            text_chunks: List[Dict],
-            images: List[Dict],
-            temperature: float = 0.3
-    ) -> Dict:
-        """Generate answer using both text and image context"""
-
-        # Build text context
-        text_context = "\n\n---\n\n".join([
-            f"[Text Source {i + 1}: {chunk['paper'][:50]}]\n{chunk['text']}"
-            for i, chunk in enumerate(text_chunks)
-        ])
-
-        # Build image context
-        image_context = "\n".join([
-            f"[Figure {i + 1}: {img['paper'][:50]}, Page {img['page']}, File: {img['filename']}]"
-            for i, img in enumerate(images)
-        ])
-
-        # System prompt
-        system_prompt = """You are an AI research assistant with access to both text excerpts and figures from research papers.
-
-Guidelines:
-- Answer questions based on provided text excerpts and available figures
-- Reference text sources using [Text Source N]
-- Reference figures using [Figure N] when relevant
-- If a figure would help illustrate your answer, mention it explicitly
-- Be precise and academic in tone
-- If information isn't in the context, say so"""
-
-        # User prompt
-        user_prompt = f"""Text context from papers:
-
-{text_context}
-
----
-
-Available figures:
-{image_context}
-
----
-
-Question: {query}
-
-Answer based on the text and mention relevant figures if they help illustrate the answer:"""
-
-        # Call LLM
-        start_time = time.time()
-
-        response = self.client.chat.completions.create(
-            model=self.llm_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=temperature,
-            max_tokens=500
-        )
-
-        answer = response.choices[0].message.content
-        latency = time.time() - start_time
-
-        return {
-            'answer': answer,
-            'text_sources': text_chunks,
-            'image_sources': images,
-            'latency': latency,
-            'model': self.llm_model,
-            'tokens_used': response.usage.total_tokens
-        }
-
     def query(
             self,
             question: str,
-            text_k: int = 3,
-            image_k: int = 2,
+            text_k: int = 5,  # Changed from 3 to 5
+            image_k: int = 3,  # Changed from 2 to 3
             verbose: bool = True
     ) -> Dict:
         """
-        Complete multi-modal RAG query
+        Complete multi-modal RAG query with enhanced response generation
 
         Args:
             question: User question
-            text_k: Number of text chunks to retrieve
-            image_k: Number of images to retrieve
+            text_k: Number of text chunks to retrieve (default: 5)
+            image_k: Number of images to retrieve (default: 3)
             verbose: Print progress
+
+        Returns:
+            Dict with answer, sources, and metadata
         """
         if verbose:
             print(f"Question: {question}")
             print("=" * 80)
 
-        # Retrieve
+        # Retrieve context
         if verbose:
             print(f"\n[1/2] Retrieving context...")
             print(f"  Text chunks: top {text_k}")
             print(f"  Images: top {image_k}")
+
+        start_time = time.time()
 
         text_results, image_results = self.retrieve_multimodal(
             question,
@@ -272,17 +204,98 @@ Answer based on the text and mention relevant figures if they help illustrate th
             print(
                 f"  {len(image_results)} images (scores: {image_results[0]['score']:.3f}-{image_results[-1]['score']:.3f})")
 
-        # Generate
+        # Build enhanced context with citations
+        context_parts = []
+        for i, chunk in enumerate(text_results, 1):
+            paper_name = chunk['paper'][:60]  # Truncate long names
+            chunk_id = chunk['chunk_id']
+            score = chunk['score']
+            text = chunk['text']
+
+            context_parts.append(
+                f"[Source {i}] {paper_name} | Chunk {chunk_id} | Relevance: {score:.3f}\n{text}\n"
+            )
+
+        context = "\n".join(context_parts)
+
+        # Build image context
+        image_context = "\n".join([
+            f"[Figure {i}] {img['paper'][:50]}, Page {img['page']}, Score: {img['score']:.3f}"
+            for i, img in enumerate(image_results, 1)
+        ])
+
+        # Enhanced prompt for comprehensive responses
+        system_prompt = """You are an expert AI research assistant specializing in transformers, deep learning, and AI research.
+
+You have access to both text excerpts and figures from academic papers. Your role is to provide comprehensive, well-structured answers based on this context."""
+
+        user_prompt = f"""Based on the following {text_k} sources, provide a comprehensive, well-structured answer to the user's question.
+
+**Guidelines:**
+- Synthesize information from ALL sources into a cohesive response
+- Use 2-4 paragraphs to organize different aspects of the answer
+- Include specific technical details, architectures, methodologies, and results when relevant
+- Cite sources by number [Source N] when making specific claims
+- Reference figures [Figure N] when they help illustrate your answer
+- If sources contain different perspectives or conflicting information, acknowledge this
+- Focus on accuracy and depth over brevity
+
+**Question:** {question}
+
+**Sources:**
+{context}
+
+**Available Figures:**
+{image_context}
+
+Provide a detailed, well-organized response:"""
+
+        # Generate answer
         if verbose:
             print(f"\n[2/2] Generating answer with {self.llm_model}...")
 
-        result = self.generate_answer(question, text_results, image_results)
+        response = self.client.chat.completions.create(
+            model=self.llm_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=800  # Increased from 500 for longer responses
+        )
+
+        answer = response.choices[0].message.content
+        end_time = time.time()
+        latency = end_time - start_time
+
+        # Calculate cost
+        prompt_tokens = response.usage.prompt_tokens
+        completion_tokens = response.usage.completion_tokens
+        total_tokens = response.usage.total_tokens
+
+        # GPT-3.5-turbo pricing: $0.0005/1K input, $0.0015/1K output
+        cost = (prompt_tokens * 0.0005 / 1000) + (completion_tokens * 0.0015 / 1000)
 
         if verbose:
-            print(f"Answer generated in {result['latency']:.2f}s")
-            print(f"Tokens used: {result['tokens_used']}")
+            print(f"Answer generated in {latency:.2f}s")
+            print(f"Tokens used: {total_tokens} (prompt: {prompt_tokens}, completion: {completion_tokens})")
+            print(f"Estimated cost: ${cost:.4f}")
 
-        return result
+        return {
+            'answer': answer,
+            'text_sources': text_results,
+            'image_sources': image_results,
+            'metadata': {
+                'latency': round(latency, 2),
+                'model': self.llm_model,
+                'prompt_tokens': prompt_tokens,
+                'completion_tokens': completion_tokens,
+                'total_tokens': total_tokens,
+                'estimated_cost_usd': round(cost, 4),
+                'text_k': text_k,
+                'image_k': image_k
+            }
+        }
 
     def display_result(self, result: Dict):
         """Pretty print multi-modal result"""

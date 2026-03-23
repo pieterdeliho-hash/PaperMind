@@ -72,8 +72,8 @@ class PDFExtractor:
         """Save extraction results to JSON"""
         output_path = self.output_dir / output_filename
 
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+        with open(output_path, 'w', encoding='utf-8', errors='ignore') as f:
+            json.dump(results, f, indent=2, ensure_ascii=True)
 
         print(f"Saved results to: {output_path}")
 

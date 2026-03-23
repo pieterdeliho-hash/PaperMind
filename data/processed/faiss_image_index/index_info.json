@@ -1,5 +1,5 @@
 {
-  "num_vectors": 2655,
+  "num_vectors": 6591,
   "embedding_dim": 512,
   "index_type": "IndexFlatL2",
   "model": "openai/clip-vit-base-patch32"

@@ -15,7 +15,36 @@ project_root = Path.cwd()
 sys.path.insert(0, str(project_root))
 
 # Import RAG pipeline
-from src.multimodal_rag_pipeline import MultiModalRAG
+from multimodal_rag_pipeline import MultiModalRAG
+
+def get_retrieval_params(query: str) -> tuple:
+    """
+    Automatically determine optimal k_text and k_images based on query complexity
+
+    Args:
+        query: User's question
+
+    Returns:
+        (k_text, k_images) tuple
+    """
+    query_lower = query.lower()
+    word_count = len(query.split())
+
+    # Visual queries need more images
+    visual_keywords = ['show', 'diagram', 'figure', 'visualiz', 'image', 'picture', 'graph', 'chart', 'plot']
+    if any(keyword in query_lower for keyword in visual_keywords):
+        return (4, 5)  # Fewer text, more images
+
+    # Broad/complex queries need more text sources
+    complex_keywords = ['compare', 'difference', 'vs', 'versus', 'explain', 'comprehensive', 'detail', 'analyze']
+    if word_count > 15 or any(keyword in query_lower for keyword in complex_keywords):
+        return (7, 3)  # More text sources
+
+    # Default: balanced retrieval
+    return (5, 3)
+
+# Initialize
+rag = MultiModalRAG()
 
 # Page config
 st.set_page_config(
@@ -59,13 +88,24 @@ if 'active_tab' not in st.session_state:
 st.markdown('<div class="main-header">🧠 PaperMind</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">AI Research Assistant with Multi-Modal RAG</div>', unsafe_allow_html=True)
 
+# Sidebar UI
 # Sidebar
 with st.sidebar:
     st.header("⚙️ Settings")
 
-    st.subheader("Retrieval Configuration")
-    text_k = st.slider("Text chunks to retrieve", 1, 10, 3)
-    image_k = st.slider("Images to retrieve", 0, 5, 2)
+    # Advanced mode toggle (hidden by default)
+    advanced_mode = st.checkbox("🔧 Advanced Mode", value=False, help="Show advanced retrieval settings")
+
+    if advanced_mode:
+        st.subheader("Retrieval Configuration")
+        st.caption("⚠️ Only adjust if you know what you're doing")
+        text_k = st.slider("Text chunks to retrieve", 1, 10, 5, help="More chunks = more context but slower")
+        image_k = st.slider("Images to retrieve", 0, 5, 3, help="0 = text-only mode")
+        st.info("💡 Tip: System auto-adjusts these based on your query when Advanced Mode is off")
+    else:
+        # Auto-detection happens in ask_question function
+        text_k = None  # Will be determined automatically
+        image_k = None
 
     st.subheader("System Information")
     col1, col2 = st.columns(2)
@@ -77,13 +117,13 @@ with st.sidebar:
     st.subheader("About")
     st.markdown("""
     **PaperMind** uses Retrieval-Augmented Generation to answer questions about transformer research papers.
-    
+
     **Features:**
-    - 57 research papers indexed
+    - 200+ research papers indexed
     - Multi-modal search (text + images)
-    - GPT-3.5 powered answers
-    - Citation tracking
-    
+    - GPT-3.5 powered comprehensive answers
+    - Automatic source citation
+
     **Tech Stack:**
     - FAISS vector search
     - CLIP image embeddings
@@ -91,29 +131,37 @@ with st.sidebar:
     - Streamlit UI
     """)
 
-    if st.button("Clear Chat History"):
+    if st.button("Clear Chat History", use_container_width=True):
         st.session_state.chat_history = []
         st.rerun()
 
-# Helper function to process question
+
 def ask_question(question):
     """Process a question and add to history"""
+
+    # Determine retrieval parameters
+    if text_k is None or image_k is None:
+        # Auto-detect based on query
+        auto_text_k, auto_image_k = get_retrieval_params(question)
+    else:
+        # Use manual settings from Advanced Mode
+        auto_text_k, auto_image_k = text_k, image_k
+
     with st.spinner("Searching papers and generating answer..."):
         result = st.session_state.rag.query(
             question,
-            text_k=text_k,
-            image_k=image_k,
+            text_k=auto_text_k,
+            image_k=auto_image_k,
             verbose=False
         )
 
+    # Store with new metadata structure
     st.session_state.chat_history.append({
         'question': question,
         'answer': result['answer'],
         'text_sources': result['text_sources'],
         'image_sources': result['image_sources'],
-        'latency': result['latency'],
-        'tokens_used': result['tokens_used'],
-        'model': result['model']
+        'metadata': result['metadata']
     })
 
     # Switch to chat tab
@@ -136,16 +184,23 @@ with tab1:
             st.write(entry['answer'])
 
             # Sources expander
-            with st.expander("📚 View Sources"):
-                st.markdown("**Text Sources:**")
-                for j, source in enumerate(entry['text_sources'], 1):
-                    st.markdown(f"""
-                    **[{j}]** {source['paper'][:60]}  
-                    Chunk {source['chunk_id'] + 1} | Relevance: {source['score']:.3f}
-                    """)
+            with st.expander("📄 View Sources", expanded=False):
+                st.markdown("### Text Sources:")
+                for i, chunk in enumerate(entry['text_sources'], 1):
+                    paper = chunk['paper']
+                    chunk_id = chunk['chunk_id']
+                    score = chunk['score']
+
+                    st.markdown(f"**[{i}] {paper}**")
+                    st.caption(f"Chunk {chunk_id} | Relevance: {score:.3f}")
+
+                    # Show full text in a scrollable container
+                    with st.container():
+                        st.markdown(f"```\n{chunk['text']}\n```")
+                    st.divider()
 
                 if entry['image_sources']:
-                    st.markdown("**Figure Sources:**")
+                    st.markdown("### Figure Sources:")
                     cols = st.columns(len(entry['image_sources']))
                     for j, (col, img) in enumerate(zip(cols, entry['image_sources']), 1):
                         with col:
@@ -169,13 +224,29 @@ with tab1:
                                 if image_path.exists():
                                     # Open and display image
                                     with Image.open(str(image_path)) as img_obj:
-                                        st.image(img_obj, use_column_width=True)
+                                        st.image(img_obj)
                                 else:
                                     st.warning(f"Image not found: {image_path}")
                             except Exception as e:
                                 st.warning(f"Error loading image: {str(e)}")
 
-            st.caption(f"⏱️ {entry['latency']:.2f}s | 🎯 {entry['tokens_used']} tokens | 🤖 {entry['model']}")
+            # Handles old and new structure
+            if 'metadata' in entry:
+                # New structure
+                meta = entry['metadata']
+                st.caption(
+                    f"⏱️ {meta['latency']}s | "
+                    f"💬 {meta['total_tokens']} tokens | "
+                    f"💰 ${meta['estimated_cost_usd']} | "
+                    f"🤖 {meta['model']}"
+                )
+            else:
+                # Old structure (backward compatibility)
+                st.caption(
+                    f"⏱️ {entry.get('latency', 'N/A')}s | "
+                    f"💬 {entry.get('tokens_used', 'N/A')} tokens | "
+                    f"🤖 {entry.get('model', 'gpt-3.5-turbo')}"
+                )
 
     # Chat input
     question = st.chat_input("Ask a question about transformers...")
