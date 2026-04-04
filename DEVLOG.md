@@ -20,7 +20,7 @@
 
 
 
-\*\*Week 1 (March 4-10)\*\*: Core RAG Pipeline ✅ 
+\*\*Week 1 (March 4-10)\*\*: Core RAG Pipeline 
 
 \*\*Week 2 (March 11-17)\*\*: Multi-Modal + Evaluation  
 
@@ -704,7 +704,7 @@ Query 4: "Image classification accuracy"
 
 
 
-\*\*Quality verdict: EXCELLENT\*\* ✅
+\*\*Quality verdict: EXCELLENT\*\* 
 
 \- All queries retrieved semantically relevant chunks
 
@@ -2304,3 +2304,265 @@ Hard queries (2):
 3. Analyze results and identify weaknesses
 4. Implement hybrid search (dense + sparse)
 5. Add conversation memory for multi-turn queries
+
+---
+
+## Day 17 - Corpus Expansion to 258 Papers - March 20, 2026
+
+**Time spent**: 3 hours
+
+**What I did:**
+- Expanded corpus from 57 to 258 papers using download_papers.py
+- Re-ran full pipeline: extraction, chunking, embedding, indexing
+- Discovered and fixed a variable name bug in text_chunker.py
+- Discovered and fixed a tokenization error in generate_embeddings.py
+- Verified all 258 papers processed correctly
+
+**Corpus expansion results:**
+- Papers downloaded: 258 (expanded from 57)
+- Text chunks generated: 11,787 (expanded from 3,431)
+- Images extracted: 6,591 (expanded from 2,655)
+- Embedding generation time: approximately 5 minutes on CPU
+- FAISS index build time: under 1 second
+
+**Bug 1: text_chunker.py variable name mismatch**
+- Error: NameError: name 'results' is not defined at line 146
+- Cause: Variable was named 'output' throughout the function but json.dump referenced 'results'
+- Fix: Changed json.dump(results, f) to json.dump(output, f)
+- Resolution time: 5 minutes
+
+**Bug 2: generate_embeddings.py tokenization error**
+- Error: TypeError: TextEncodeInput must be Union[TextInputSequence, ...]
+- Cause: Some chunks contained null bytes, Unicode surrogates, and other invalid characters that the sentence-transformers tokenizer could not handle
+- Fix: Added a robust text cleaning pipeline that strips null bytes and Unicode surrogates, then tests each chunk individually before batch encoding, skipping any that still fail with clear log output
+- Resolution time: 2 hours
+- Failure rate: 3 chunks skipped out of 11,787 (0.03%)
+
+**Decisions made:**
+- Kept CPU-only embedding generation rather than switching to GPU
+  - Reasoning: The cloud deployment target is CPU-only anyway, so keeping local generation consistent with the deployment environment reduces surprises
+  - Trade-off: Slower locally, but a one-time cost since embeddings are pre-generated
+
+**Learnings:**
+- Robust text cleaning is essential before any tokenizer call -- academic PDFs contain more encoding edge cases than expected
+- Testing chunks individually before batch encoding is the correct pattern for fault-tolerant embedding pipelines
+- A 0.03% failure rate on a text cleaning pipeline is acceptable
+
+**Mood**: Frustrating bugs but satisfying to fix. System now 4.5x larger.
+
+---
+
+## Day 18 - Image Embeddings and GitHub Size Crisis - March 23, 2026
+
+**Time spent**: 4 hours
+
+**What I did:**
+- Generated CLIP image embeddings for 6,591 figures
+- Attempted first push to GitHub -- failed due to file size limits
+- Analysed repository size and identified oversized files
+- Created fresh repository with correct file selection
+- Successfully pushed 93 MB repository to GitHub
+
+**Image embedding generation:**
+- Model: CLIP ViT-B/32
+- Images processed: 6,591
+- Processing time: approximately 8 minutes on CPU
+- Success rate: 100%
+- Output: image_embeddings.npy (13 MB)
+
+**GitHub size crisis:**
+
+First push attempt failed with:
+```
+error: File data/processed/embeddings_512.json is 142.95 MB;
+this exceeds GitHub's file size limit of 100.00 MB
+```
+
+Full repository breakdown:
+- embeddings_512.json: 142 MB (JSON embedding file)
+- image_embeddings.json: 73 MB (JSON embedding file)
+- images/ folder: 419 MB (6,591 extracted PNG files)
+- PDF files: 500 MB
+
+Total: approximately 606 MB -- six times over the GitHub limit.
+
+**Solution:**
+
+Key insight: .npy (NumPy binary) format is approximately 9 times smaller than JSON for floating-point arrays.
+- embeddings_512.json: 142 MB vs embeddings_512.npy: 5 MB
+- image_embeddings.json: 73 MB vs image_embeddings.npy: 13 MB
+
+Approach taken:
+1. Renamed local folder to PaperMind_BACKUP
+2. Cloned fresh repository from GitHub
+3. Copied only the files that fit within limits: source code, metadata JSONs, FAISS indexes, .npy embedding files
+4. Updated .gitignore to exclude PDFs, extracted images, and JSON embeddings
+5. Final push: 93 MB -- within the 100 MB limit
+
+Files committed:
+- embeddings_512.npy (5 MB)
+- image_embeddings.npy (13 MB)
+- chunks_recursive_512.json (23 MB)
+- extracted_text.json (17 MB)
+- faiss_index/ (20 MB)
+- faiss_image_index/ (15 MB)
+
+Files excluded:
+- PDF files (~500 MB) -- can be regenerated locally if needed
+- images/ folder (~419 MB) -- can be regenerated locally if needed
+- JSON embedding files (~215 MB) -- replaced by .npy equivalents
+
+**Decisions made:**
+- Fresh repository over git history rewriting
+  - Reasoning: Trying to remove large files from git history with git filter-branch or BFG is error-prone and time-consuming. Starting fresh with the correct file selection is cleaner and faster.
+  - Trade-off: Lost granular commit history from earlier development days. Acceptable given the deadline.
+
+**Learnings:**
+- Always plan the deployment file strategy before generating large intermediate files
+- .npy format should be the default for any floating-point matrix that needs to be stored or committed
+- git filter-branch exists but a fresh repository is often the faster practical choice
+
+**Mood**: Stressful but resolved cleanly. The 9x compression insight was the key.
+
+---
+
+## Day 19 - Streamlit Cloud Block and Debugging - March 23-30, 2026
+
+**Time spent**: 6 hours across multiple sessions
+
+**What I did:**
+- Attempted first cloud deployment to Streamlit Cloud
+- Account was blocked due to excessive CPU usage on startup
+- Emailed Streamlit support and waited for unblock
+- Diagnosed and fixed four separate bugs in the codebase
+- Verified local app running correctly after all fixes
+
+**Cloud deployment attempt:**
+
+Deployed to Streamlit Cloud. App started but then the account was blocked:
+```
+Error 403: Your account has exceeded the fair-use limits
+and was blocked by the system.
+```
+
+Root cause: The original streamlit_app.py called subprocess.run() to trigger embedding generation on startup. On the cloud environment, attempting to generate embeddings for 11,787 chunks and 6,591 images on a shared CPU exceeded the fair-use limits and triggered an automatic block.
+
+Timeline:
+- Blocked: March 23, approximately 2pm
+- Support email sent: March 23, approximately 3pm
+- Support response: March 26, 10am
+- Account unblocked: March 26, 11am
+
+Correct solution: Remove all embedding generation from the cloud startup path entirely. Pre-generate locally, commit .npy files, and simply load them at startup. Startup time went from a potential 10+ minutes to under 15 seconds.
+
+**Bug 1: streamlit_app.py entry point using exec()**
+
+Problem: The original entry point used exec(f.read()) to load web_ui.py, which caused namespace pollution and made import errors nearly impossible to debug.
+
+Fix:
+```python
+from web_ui import run_app
+if __name__ == "__main__":
+    run_app()
+```
+
+**Bug 2: API key loading failure**
+
+Problem: The API key loading logic did not handle the case where st.secrets exists but the key is absent, and did not strip whitespace from loaded keys. This caused silent failures where an apparently valid key was actually invalid due to leading or trailing whitespace.
+
+Fix: Added .strip() to all three key loading paths (Streamlit secrets, environment variable, .env file). Added explicit fallback chain with clear error messages at each stage.
+
+**Bug 3: Duplicate RAG initialisation in web_ui.py**
+
+Problem: The RAG pipeline was being initialised twice -- once at module level (line 49) and once inside session_state (line 77). This doubled model loading time and memory usage on every cold start.
+
+Fix: Removed the module-level initialisation at line 49, kept only the session_state version which correctly initialises once and persists across reruns.
+
+**Bug 4: secrets.toml format error**
+
+Problem: The secrets.toml file had the API key without quotes:
+```
+OPENAI_API_KEY = sk-proj-xxx
+```
+Streamlit's TOML parser raised TomlDecodeError: Invalid date or number because it tried to interpret the key value as a non-string type.
+
+Fix: Added quotes:
+```
+OPENAI_API_KEY = "sk-proj-xxx"
+```
+
+**Learnings:**
+- Never run heavy compute on cloud startup -- pre-process everything locally
+- exec() is an anti-pattern in any production Python code, including Streamlit apps
+- Whitespace in API keys is a common silent failure mode -- always strip
+- Session state initialisation must be guarded with if 'key' not in st.session_state to prevent duplicate loading
+- TOML string values require quotes, unlike some other config formats
+
+**Mood**: The three-day wait for support was difficult under deadline pressure. The debugging session after was productive.
+
+---
+
+## Day 20 - UI Fixes, Documentation Sprint, and Final Deployment - April 2-4, 2026
+
+**Time spent**: 8 hours across April 2 to April 4
+
+**What I did:**
+- Fixed UI duplication bug caused by unconditional st.rerun() calls
+- Removed image display from the UI (text-only figure references)
+- Confirmed local and cloud deployments both fully operational
+- Updated the How It Works tab with accurate corpus numbers
+- Completed README.md (full rewrite)
+- Completed ARCHITECTURE.md (technical deep-dive)
+- Updated DEVLOG with final entries
+
+**Bug: UI duplication on query submission**
+
+Problem: After submitting a question, the page would visually duplicate before showing the answer. The cause was st.rerun() being called unconditionally after ask_question(), even when the query raised an exception. This triggered a full page rerender mid-error state, producing a doubled UI.
+
+Fix: Made all st.rerun() calls conditional on chat_history having content, meaning the rerun only fires if the query actually completed and appended a result:
+```python
+if question:
+    ask_question(question)
+    if st.session_state.chat_history:
+        st.rerun()
+```
+Applied the same pattern to all four button handlers in the Example Queries tab.
+
+**Image display removal:**
+
+The extracted figure PNG files are not committed to GitHub due to size constraints. The UI was showing "Image not found" warnings in yellow boxes for every query because the image paths pointed to local Windows paths that do not exist in the cloud environment.
+
+Decision: Remove the image rendering block entirely and replace with clean text-only figure references showing the paper name, filename, page number, and relevance score. The multimodal retrieval capability is preserved -- the RAG pipeline still searches both indexes and the LLM still references figures in answers -- but the UI no longer attempts to display images it cannot access.
+
+This also allowed removing the PIL import from web_ui.py, which was the only remaining use of Pillow in the UI layer.
+
+**Cloud deployment fix:**
+
+The web deployment was failing at query time with a 401 authentication error. The cause was a stale or incorrect API key in the Streamlit Cloud secrets dashboard. After updating the secret with the correct key and pushing the updated web_ui.py, both local and cloud deployments are confirmed working correctly.
+
+**Documentation completed:**
+
+README.md: Full rewrite covering features, live demo link, architecture diagram, technical specifications table, performance metrics, local setup instructions, project structure, key design decisions, future improvements, and contact information.
+
+ARCHITECTURE.md: Technical deep-dive covering all five pipeline stages (acquisition, processing, chunking, embedding generation, index construction), both retrieval systems with code examples, the generation pipeline including prompt design and cost breakdown, deployment architecture with repository size management strategy, five key design decisions with full reasoning, performance characteristics with latency breakdown and scalability limits, and four concrete future improvements.
+
+**Project totals:**
+- Development time: approximately 40 hours over 5 weeks
+- Lines of code: approximately 2,500
+- Papers indexed: 258
+- Text chunks: 11,787
+- Image embeddings: 6,591
+- Total embeddings: 18,378
+- Bugs fixed: tracked across devlog entries
+- Deployment platform: Streamlit Cloud (live)
+
+**Lessons learned across the full project:**
+
+1. Plan deployment constraints before generating data -- the GitHub size limit and Streamlit CPU limits should have been researched on day one.
+2. Pre-process everything that can be pre-processed -- embedding generation belongs in the development pipeline, not the startup path.
+3. File format matters more than expected -- .npy vs .json was a 9x size difference that determined whether the project could be deployed at all.
+4. Clean architecture pays off -- removing the exec() anti-pattern made the subsequent debugging significantly faster.
+5. Documentation cannot wait until the end -- writing ARCHITECTURE.md after the fact required reconstructing decisions that would have taken seconds to note at the time.
+6. Robust error handling in text pipelines is not optional -- academic PDFs contain enough encoding edge cases that any tokenizer call without sanitisation will eventually fail.
+
+**Mood**: Satisfied. System is live, documented, and functional end-to-end.

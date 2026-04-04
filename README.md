@@ -1,266 +1,250 @@
-# PaperMind: AI Research Assistant with RAG
+# PaperMind: AI Research Assistant with Multi-Modal RAG
 
-**Production-ready Retrieval-Augmented Generation system for academic research papers**
+[!\[Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://papermind-ai-assistant.streamlit.app)
+[!\[Python 3.11](https://img.shields.io/badge/python-3.11-blue)](https://www.python.org)
+[!\[License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
-Transform how you interact with research literature. PaperMind uses semantic search and large language models to answer questions from 50+ academic papers with precise citations.
+A Retrieval-Augmented Generation (RAG) system for querying 258 AI research papers using semantic search over text and image embeddings.
 
----
+!\[PaperMind Homepage](docs/screenshots/homepage.png)
 
-## Current Status
+\---
 
-**Timeline**: March 4 - April 5, 2025 (1-month sprint)  
-**Progress**: Week 1 Complete (Days 1-6 done in 1 day!)
+## Key Features
 
-**Completed**:
-- PDF ingestion pipeline (57 papers indexed)
-- Production-grade text chunking (3,431 chunks, 512 tokens, recursive splitting)
-- Vector embeddings (all-MiniLM-L6-v2, 384-dim)
-- FAISS vector search (sub-millisecond retrieval)
-- LLM integration (GPT-3.5-turbo with citations)
-- End-to-end RAG pipeline working
+### Multi-Modal Retrieval
 
-**Next Up**:
-- Multi-modal retrieval (text + images with CLIP)
-- Web interface (Streamlit)
-- Evaluation framework
+* **Text Search**: 11,780 text chunks embedded with sentence-transformers (all-MiniLM-L6-v2, 384-dim)
+* **Image Search**: 6,591 figure embeddings using CLIP (ViT-B/32, 512-dim)
+* **Hybrid Intelligence**: LLM synthesizes both text evidence and figure references into a single answer
 
----
+### Performance
 
-## Features
+* **Corpus**: 258 AI research papers sourced from ArXiv
+* **Retrieval Speed**: Under 100ms via FAISS vector search
+* **Answer Generation**: Approximately 3 seconds total latency
+* **Cost Efficient**: $0.006 per query using GPT-3.5-turbo
 
-### Core Capabilities
-- **Multi-Modal Retrieval**: Searches both text chunks and figures/diagrams
-- **Rich Responses**: Comprehensive 2-4 paragraph answers synthesized from 5 text sources
-- **Visual Context**: Displays 3 relevant figures with similarity scores
-- **Source Citations**: Shows exact paper names, page numbers, and relevance scores
-- **Expanded Corpus**: 200+ research papers with 10,000+ text chunks and 5,000+ images
+### Smart Features
 
-### Technical Stack
-- **Text Embeddings**: all-MiniLM-L6-v2 (384-dim)
-- **Image Embeddings**: CLIP ViT-B/32 (512-dim)
-- **Vector Search**: FAISS IndexFlatL2
-- **LLM**: GPT-3.5-turbo with enhanced synthesis prompts
-- **Web UI**: Streamlit with responsive design
+* **Auto-tuned Retrieval**: Adjusts k\_text and k\_images based on query type and complexity
+* **Citation Tracking**: Automatic source attribution with \[Source N] and \[Figure N] references
+* **Advanced Mode**: Manual control over retrieval parameters via sidebar
+* **System Metrics**: Live display of token usage, latency, and cost per query
 
-### Quality Metrics (RAGAS Framework)
-- Answer Relevancy: Measures question-answer alignment
-- Faithfulness: Detects hallucinations
-- Context Precision: Evaluates retrieval accuracy
-- Context Recall: Measures information completeness
+\---
 
----
+## Live Demo
 
-## Tech Stack
+**Try it now:** [papermind-ai-assistant.streamlit.app](https://papermind-ai-assistant.streamlit.app)
 
-**Core**:
-- Python 3.11
-- sentence-transformers (embeddings)
-- FAISS (vector search)
-- LangChain (text splitting, orchestration)
-- OpenAI API (LLM)
+Example queries to get started:
 
-**Data Processing**:
-- PyPDF2, pdfplumber (PDF extraction)
-- tiktoken (tokenization)
-- arxiv (paper download)
+* "What are transformer architectures?"
+* "Explain multi-head attention mechanisms"
+* "Compare vision transformers to standard transformers"
+* "How do efficient transformers handle long sequences?"
 
-**Production**:
-- Streamlit (UI) or FastAPI + React
-- NumPy (vector operations)
-- tqdm (progress tracking)
+\---
 
----
+## Screenshots
 
-## 📦 Installation
-```bash
-# Clone repository
-cd PaperMind
+### Query and Answer
 
-# Create virtual environment
-python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Mac/Linux
+!\[Query and Answer](docs/screenshots/query\_answer.png)
 
-# Install dependencies
-pip install -r requirements.txt
+### Text Sources
 
-# Download NLTK data (one-time)
-python -c "import nltk; nltk.download('punkt')"
+!\[Sources View](docs/screenshots/sources.png)
+
+!\[Sources View](docs/screenshots/sources2.png)
+
+### Sidebar and System Metrics
+
+!\[Sidebar](docs/screenshots/sidebar.png)
+
+\---
+
+## Architecture
+
+```
+User Query
+    |
+    +---------------------------+
+    |                           |
+Text Embedding             Image Embedding
+(all-MiniLM-L6-v2)        (CLIP ViT-B/32)
+    |                           |
+FAISS Text Search          FAISS Image Search
+11,780 chunks              6,591 figures
+    |                           |
+Top-5 Text Results         Top-3 Figure References
+    |                           |
+    +---------------------------+
+                |
+        Context Assembly
+                |
+        GPT-3.5-turbo Generation
+                |
+        Answer + Citations
 ```
 
----
+\---
 
-## Quick Start
+## Technical Details
 
-### Run the Web Interface
-```bash
-streamlit run streamlit_app.py
-```
+|Component|Technology|Specification|
+|-|-|-|
+|Text Embeddings|sentence-transformers|all-MiniLM-L6-v2 (384-dim)|
+|Image Embeddings|CLIP|ViT-B/32 (512-dim)|
+|Vector Database|FAISS|IndexFlatL2, 11,787 + 6,591 vectors|
+|LLM|OpenAI|GPT-3.5-turbo|
+|Chunking|LangChain|Recursive, 512 tokens, 20% overlap|
+|Framework|Streamlit|1.31.0|
+|Deployment|Streamlit Cloud|Free tier|
 
-### Evaluate System Quality
-```bash
-# Run RAGAS evaluation (10 test queries)
-python src/evaluate_with_ragas.py
-```
-
-### Expand the Corpus
-```bash
-# Download more papers (targeting 200+ total)
-python src/download_more_papers.py
-
-# Reprocess everything
-python src/pdf_extractor.py
-python src/text_chunker.py
-python src/extract_images.py
-python src/generate_embeddings.py
-python src/generate_image_embeddings.py
-python src/build_faiss_index.py
-python src/build_image_faiss_index.py
---
+\---
 
 ## Performance Metrics
 
-### Corpus Statistics (Updated)
-- **Papers**: 200+ research papers on transformers and AI
-- **Text Chunks**: 10,000+ chunks (512 tokens, 20% overlap)
-- **Images**: 5,000+ figures, diagrams, and visualizations
-- **Index Size**: ~150 MB (text + image embeddings)
+|Metric|Value|
+|-|-|
+|Papers Indexed|258|
+|Text Chunks|11,787|
+|Image Embeddings|6,591|
+|Average Query Latency|\~3.0s|
+|Retrieval Precision|45-50% (estimated)|
+|Cost per Query|$0.006|
+|FAISS Search Time|Under 100ms|
 
-### Retrieval Performance
-- **Retrieval Configuration**: Top-5 text chunks, Top-3 images
-- **Retrieval Precision**: 35% (text), 28% (images)
-- **Top Result Relevance**: 0.539 (text), 0.451 (images)
+\---
 
-### Response Quality (RAGAS)
-- **Answer Relevancy**: 0.XXX (run evaluation to get actual scores)
-- **Faithfulness**: 0.XXX
-- **Context Precision**: 0.XXX
-- **Context Recall**: 0.XXX
+## Local Setup
 
-### System Performance
-- **Average Latency**: 3.5s (text search: 0.2s, image search: 0.3s, LLM: 3.0s)
-- **Cost Per Query**: $0.006 USD (GPT-3.5-turbo, ~800 tokens)
-- **Throughput**: ~17 queries/minute (with rate limiting)
----
+**Prerequisites:**
 
-## 📁 Project Structure
+* Python 3.11 or higher
+* OpenAI API key
+
+**Installation:**
+
+```bash
+# Clone the repository
+git clone https://github.com/pieterdeliho-hash/PaperMind.git
+cd PaperMind
+
+# Create and activate virtual environment
+python -m venv venv
+venv\\Scripts\\activate        # Windows
+source venv/bin/activate     # Mac/Linux
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+**API Key Setup:**
+
+Create `.streamlit/secrets.toml` with your OpenAI API key:
+
+```toml
+OPENAI\_API\_KEY = "key-here"
+```
+
+**Run the application:**
+
+```bash
+streamlit run streamlit\_app.py
+```
+
+\---
+
+## Project Structure
+
 ```
 PaperMind/
-├── data/
-│   ├── papers/              # Raw PDF files
-│   ├── processed/           # Extracted text, chunks, embeddings
 ├── src/
-│   ├── download_papers.py   # ArXiv downloader
-│   ├── pdf_extractor.py     # PDF → text
-│   ├── text_chunker.py      # Text → chunks
-│   ├── generate_embeddings.py  # Chunks → vectors
-│   ├── build_faiss_index.py    # (Day 5)
-│   └── query_rag.py            # (Day 6)
-├── notebooks/               # Experiments, analysis
-├── tests/                   # Unit tests
-├── README.md
-├── DEVLOG.md               # Development journal
-├── ARCHITECTURE.md         # Technical design
-└── requirements.txt
+│   ├── multimodal\_rag\_pipeline.py   # Core RAG system
+│   ├── web\_ui.py                    # Streamlit interface
+│   ├── pdf\_extractor.py             # PDF processing
+│   ├── text\_chunker.py              # Text chunking
+│   ├── generate\_embeddings.py       # Text embedding generation
+│   ├── generate\_image\_embeddings.py # Image embedding generation
+│   ├── build\_faiss\_index.py         # FAISS text index builder
+│   └── build\_image\_faiss\_index.py   # FAISS image index builder
+├── data/processed/
+│   ├── embeddings\_512.npy           # Pre-generated text embeddings (5 MB)
+│   ├── image\_embeddings.npy         # Pre-generated image embeddings (13 MB)
+│   ├── chunks\_recursive\_512.json    # Text chunks with metadata (23 MB)
+│   ├── extracted\_text.json          # Raw extracted paper text (17 MB)
+│   ├── faiss\_index/                 # FAISS text search index (20 MB)
+│   └── faiss\_image\_index/           # FAISS image search index (15 MB)
+├── docs/
+│   └── screenshots/                 # UI screenshots for documentation
+├── streamlit\_app.py                 # Application entry point
+├── requirements.txt                 # Pinned Python dependencies
+├── ARCHITECTURE.md                  # System architecture deep-dive
+├── DEVLOG.md                        # Development log and journey
+└── .gitignore                       # Excludes PDFs, images, large files
 ```
 
----
+\---
 
-## 🎯 Development Roadmap
+## Design Decisions
 
-### Week 1: Core RAG ✅
-- [x] PDF ingestion & chunking
-- [x] Embeddings generation
-- [ ] FAISS indexing
-- [ ] LLM integration
-- [ ] First working query
+**FAISS over cloud vector databases (Pinecone, Weaviate)**
+FAISS runs locally with no external dependencies, no API costs, and performs exact search in under 100ms for the corpus size used here. At 258 papers and roughly 18,000 total vectors, IndexFlatL2 is more than sufficient. A cloud vector database would add latency, cost, and operational complexity without meaningful benefit at this scale.
 
-### Week 2: Multi-Modal
-- [ ] Image extraction (CLIP)
-- [ ] Multi-modal retrieval
-- [ ] Evaluation framework
+**GPT-3.5-turbo over GPT-4o**
+In a RAG system, the retrieval step provides the facts — the LLM only needs to synthesize and articulate them. GPT-3.5-turbo handles this well at one-tenth the cost and roughly three times the speed of GPT-4o. Upgrading the retrieval quality (reranking, hybrid search) would yield more improvement than upgrading the LLM.
 
-### Week 3: Production
-- [ ] Web UI
-- [ ] Citation tracking
-- [ ] Error handling
+**Pre-generated embeddings over on-demand generation**
+Streamlit Cloud's free tier does not support the CPU load required to generate embeddings at startup. All embeddings are generated locally and committed to GitHub as .npy files, reducing the repository from 606 MB to 93 MB and reducing startup time to under 5 seconds.
 
-### Week 4: Polish
-- [ ] Documentation
-- [ ] Demo video
-- [ ] Code cleanup
+**Text-only UI with multimodal retrieval**
+The system retrieves and scores both text chunks and figures, and the LLM references figures in its answers. Images are not rendered in the UI because the extracted figure files are not committed to GitHub (they account for over 400 MB). This keeps the deployment lean while preserving the multimodal retrieval capability.
 
----
+\---
 
-## 📖 How It Works
+## Future Improvements
 
-1. **Ingestion**: Download papers from ArXiv, extract text
-2. **Chunking**: Split into 512-token chunks with 20% overlap
-3. **Embedding**: Convert chunks to 384-dim vectors (semantic meaning)
-4. **Indexing**: Store in FAISS for fast similarity search
-5. **Retrieval**: Find top-k most relevant chunks for query
-6. **Generation**: LLM generates answer from retrieved context
-7. **Citation**: Display sources with paper names and locations
+* **Reranking**: Cross-encoder reranking after initial retrieval for improved precision (+10-12% estimated)
+* **Hybrid Search**: Combine BM25 keyword search with dense retrieval for better recall
+* **Query Expansion**: Generate multiple query variants and merge results
+* **GPT-4o Upgrade**: Higher answer quality for complex multi-paper synthesis
+* **Corpus Expansion**: Scale to 1,000+ papers with IndexIVFFlat for faster search
+* **Image Display**: Serve extracted figures from cloud storage and render them in the UI
 
----
+\---
 
-## 🔬 Technical Highlights
+## Educational Value
 
-**Why This Approach?**
-- **Token-based chunking**: Matches LLM input limits exactly
-- **Recursive splitting**: Respects document structure (paragraphs → sentences)
-- **20% overlap**: Prevents context loss at boundaries
-- **FAISS**: 100x faster than naive similarity search
-- **MiniLM embeddings**: 384-dim balances quality and speed
+This project demonstrates practical implementation of:
 
-**Design Decisions**:
-- 512 tokens per chunk (industry standard)
-- Cosine similarity (standard for embeddings)
-- NPY format for embeddings (8x smaller than JSON)
-- Local-first (no API costs for embeddings)
+* Multi-modal machine learning with separate text and image embedding models
+* Vector database design and semantic search
+* Full RAG architecture from document ingestion to answer generation
+* Production deployment with cloud hosting and API key management
+* Performance optimization through embedding compression and pre-computation
+* Cross-platform Python development (Windows local, Linux cloud)
 
----
+\---
 
-## 📝 Citation
+## Contact
 
-If you use this project, please cite:
-```
-PaperMind: Production RAG System for Academic Research
-Author: [Your Name]
-Year: 2025
-GitHub: [Your Repo URL]
-```
+**Pieter Deliho**
+Year 2 CS/AI Student, Asia Pacific University
 
----
+* Email: pieterdeliho@gmail.com
+* GitHub: [pieterdeliho-hash](https://github.com/pieterdeliho-hash)
+* LinkedIn: [pieter-deli-ho-843216332](https://www.linkedin.com/in/pieter-deli-ho-843216332)
 
-## 📄 License
+\---
 
-MIT License - see LICENSE file
+## License
 
----
+MIT License. See LICENSE file for details.
 
-## 🙏 Acknowledgments
+\---
 
-- LangChain for text splitting utilities
-- Sentence-Transformers for embedding models
-- ArXiv for paper access
-- FAISS for vector search
+Built with Python, FAISS, OpenAI, Streamlit, sentence-transformers, and CLIP.
 
----
-
-**Status Updates**:
-
-**Week 1 (March 5)**:
-- Day 1: Environment setup, project structure
-- Day 2: Downloaded 14 papers, perfect extraction
-- Day 3: Recursive chunking, 931 chunks generated
-- Day 4: Embeddings working, semantic similarity verified
-- Day 5: FAISS indexing, sub-millisecond search
-- Day 6: LLM integration, end-to-end RAG working
-- Corpus expansion: 57 papers, 3,431 chunks, improved retrieval
-
-**Week 1 Status**: COMPLETE (all done in 1 day)
-
----
-
-*Last updated: March 5, 2025*

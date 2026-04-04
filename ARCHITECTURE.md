@@ -1,666 +1,390 @@
 # PaperMind System Architecture
 
-## Overview
-PaperMind is a multi-modal Retrieval-Augmented Generation (RAG) system that combines text and image search to answer questions about AI research papers. Built for transformer and deep learning papers, it retrieves relevant text chunks and figures, then synthesizes comprehensive answers using GPT-3.5-turbo.
+## Table of Contents
 
----
+1. [System Overview](#system-overview)
+2. [Data Pipeline](#data-pipeline)
+3. [Retrieval System](#retrieval-system)
+4. [Generation Pipeline](#generation-pipeline)
+5. [Deployment Architecture](#deployment-architecture)
+6. [Key Design Decisions](#key-design-decisions)
+7. [Performance Characteristics](#performance-characteristics)
+8. [Future Architecture Improvements](#future-architecture-improvements)
 
-## High-Level Flow
+\---
+
+## System Overview
+
+PaperMind is a production-deployed RAG system that performs semantic search over 258 AI research papers using multimodal retrieval across both text chunks and figure embeddings. The LLM synthesizes retrieved evidence into a coherent answer with automatic source citations.
+
+The core distinction from a standard text-only RAG pipeline is the dual-index architecture: text chunks and paper figures are embedded separately using domain-appropriate models, searched in parallel, and combined into a single context block before generation.
+
 ```
 User Query
-    ↓
-[Query Processing] → Tokenization & Understanding
-    ↓
-[Parallel Embedding Generation]
-    ├─→ Text Query Embedding (all-MiniLM-L6-v2, 384-dim)
-    └─→ Image Query Embedding (CLIP ViT-B/32, 512-dim)
-    ↓
-[Parallel Vector Search]
-    ├─→ Text FAISS Index → Top-5 chunks (512 tokens each)
-    └─→ Image FAISS Index → Top-3 images (with metadata)
-    ↓
-[Context Assembly]
-    ├─→ Format text chunks with [Source N] citations
-    ├─→ Include page numbers and relevance scores
-    └─→ Attach image metadata (source, page, similarity)
-    ↓
-[LLM Synthesis - GPT-3.5-turbo]
-    ├─→ Enhanced prompt (2-4 paragraph structure)
-    ├─→ Temperature: 0.3 (balanced accuracy/creativity)
-    └─→ Max tokens: 800 (comprehensive responses)
-    ↓
-[Response Rendering]
-    ├─→ Main answer with inline citations
-    ├─→ Expandable text source viewer (full chunks)
-    ├─→ Image gallery (3 figures with scores)
-    └─→ Metadata (latency, tokens, cost)
+    |
+    +---------------------------+
+    |                           |
+Text Embedding             Image Embedding
+(all-MiniLM-L6-v2)        (CLIP ViT-B/32)
+    |                           |
+FAISS Text Search          FAISS Image Search
+11,780 chunks              6,591 figures
+    |                           |
+Top-5 Text Results         Top-3 Figure References
+    |                           |
+    +---------------------------+
+                |
+        Context Assembly
+                |
+        GPT-3.5-turbo Generation
+                |
+        Answer + Citations
 ```
 
----
+\---
 
-## Components
+## Data Pipeline
 
-### 1. Document Ingestion Pipeline
+### Stage 1: Document Acquisition
 
-**Purpose**: Extract and process research papers into searchable chunks
+258 papers were downloaded from ArXiv covering the transformer and deep learning research space, spanning publications from 2017 through 2024. Selection criteria prioritised foundational and high-citation works including BERT, GPT variants, Vision Transformers, and efficient attention mechanisms.
 
-**Input**: 
-- PDF files from arXiv (transformers, AI, NLP papers)
-- Target corpus: 200+ papers
-
-**Process Flow**:
-```
-PDFs → Text Extraction → Chunking → Image Extraction → Storage
-```
-
-**Sub-Components**:
-
-#### 1.1 Text Extraction (`pdf_extractor.py`)
-- **Library**: PyMuPDF (fitz) - faster and more accurate than PyPDF2
-- **Process**: 
-  - Iterate through all pages
-  - Extract raw text with metadata
-  - Handle multi-column layouts
-  - Preserve section structure
-- **Output**: `data/processed/extracted_text.json`
-```json
-  [
-    {
-      "source": "Attention Is All You Need_1706.03762v7.pdf",
-      "page": 3,
-      "text": "The Transformer model architecture..."
-    }
-  ]
-```
-
-**Why PyMuPDF over PyPDF2:**
-- 3-5x faster extraction
-- Better handling of complex layouts
-- More accurate text positioning
-- Built-in image extraction support
-
-#### 1.2 Text Chunking (`text_chunker.py`)
-- **Strategy**: Recursive Character Splitting (LangChain)
-- **Configuration**:
-  - Chunk size: 512 tokens (~384 words)
-  - Overlap: 102 tokens (20%)
-  - Separators: `\n\n`, `\n`, `. `, ` `
-- **Process**:
-  - Split on paragraph boundaries first
-  - Fall back to sentence/word boundaries
-  - Preserve semantic coherence
-  - Add metadata (source, page, chunk_id)
-- **Output**: `data/processed/chunks_recursive_512.json`
-```json
-  [
-    {
-      "text": "The Transformer architecture relies entirely on...",
-      "metadata": {
-        "source": "Attention Is All You Need_1706.03762v7.pdf",
-        "page": 3,
-        "chunk_id": 42,
-        "start_char": 1523,
-        "end_char": 3847
-      }
-    }
-  ]
-```
-
-**Why these choices:**
-- **512 tokens**: Optimal for embedding models (max context 512)
-- **20% overlap**: Prevents splitting key concepts across chunks
-- **Recursive splitting**: Maintains semantic boundaries (paragraphs → sentences → words)
-
-#### 1.3 Image Extraction (`extract_images.py`)
-- **Library**: PyMuPDF (fitz)
-- **Process**:
-  - Scan all PDF pages for embedded images
-  - Extract images as PNG with 300 DPI
-  - Filter small/irrelevant images (< 100x100 px)
-  - Save with metadata (source PDF, page number)
-- **Output**: 
-  - Images: `data/processed/images/*.png`
-  - Metadata: `data/processed/images_metadata.json`
-```json
-  [
-    {
-      "path": "data/processed/images/Attention_Is_All_You_Need_page3_img1.png",
-      "source": "Attention Is All You Need_1706.03762v7.pdf",
-      "page": 3,
-      "width": 800,
-      "height": 600
-    }
-  ]
-```
-
-**Trade-offs:**
-- Captures diagrams, architectures, plots
-- Doesn't extract tables (future: table detection)
-- No OCR for text-in-images (future: Tesseract integration)
-
----
-
-### 2. Embedding Generation
-
-**Purpose**: Convert text chunks and images into dense vector representations
-
-#### 2.1 Text Embeddings (`generate_embeddings.py`)
-- **Model**: `sentence-transformers/all-MiniLM-L6-v2`
-- **Dimensions**: 384
-- **Performance**: ~2,800 chunks/second (GPU), ~400 chunks/second (CPU)
-- **Process**:
-  - Load model from HuggingFace
-  - Batch encode chunks (batch_size=32)
-  - Normalize embeddings (L2 norm)
-  - Save as numpy array
-- **Output**: `data/processed/embeddings_512.npy` (shape: [N, 384])
-
-**Why all-MiniLM-L6-v2:**
-- Fast inference (6-layer transformer)
-- Good semantic understanding for technical text
-- Balanced precision/recall on retrieval tasks
-- Small model size (~80MB)
-
-**Alternative considered:**
-- `text-embedding-ada-002` (OpenAI): Better quality, but costs $0.0001/1K tokens
-- `all-mpnet-base-v2`: Higher quality, but 2x slower
-
-#### 2.2 Image Embeddings (`generate_image_embeddings.py`)
-- **Model**: `openai/clip-vit-base-patch32`
-- **Dimensions**: 512
-- **Performance**: ~50 images/second (GPU), ~10 images/second (CPU)
-- **Process**:
-  - Load CLIP vision encoder
-  - Preprocess images (resize, normalize)
-  - Extract visual features
-  - Save as numpy array
-- **Output**: `data/processed/image_embeddings.npy` (shape: [M, 512])
-
-**Why CLIP:**
-- Trained on text-image pairs (understands semantic similarity)
-- Can match text queries to visual content
-- Robust to different diagram styles
-- Open-source and lightweight
-
----
-
-### 3. Vector Database (FAISS)
-
-**Purpose**: Fast approximate nearest neighbor search
-
-#### 3.1 Text Index (`build_faiss_index.py`)
-- **Index Type**: IndexFlatL2 (exact L2 distance)
-- **Size**: ~4 MB per 10,000 chunks
-- **Build Time**: <1 second
-- **Search Time**: ~50ms for top-5 from 10,000 chunks
-- **Output**: `data/processed/faiss_index/faiss_index.bin`
-
-**Why IndexFlatL2:**
-- Exact search (no approximation errors)
-- Fast enough for <100K vectors
-- No training required
-- Deterministic results
-
-**Alternative for scaling:**
-- `IndexIVFFlat`: For 100K-1M vectors
-- `IndexHNSW`: For >1M vectors with faster search
-
-#### 3.2 Image Index (`build_image_faiss_index.py`)
-- **Index Type**: IndexFlatL2
-- **Size**: ~2 MB per 5,000 images
-- **Build Time**: <1 second
-- **Search Time**: ~30ms for top-3 from 5,000 images
-- **Output**: `data/processed/faiss_image_index/faiss_image_index.bin`
-
----
-
-### 4. RAG Pipeline
-
-#### 4.1 Text-Only RAG (`rag_pipeline.py`)
-- **Input**: User query (string)
-- **Process**:
-  1. Embed query with all-MiniLM-L6-v2
-  2. Search FAISS index for top-k chunks
-  3. Assemble context from retrieved chunks
-  4. Call GPT-3.5-turbo with context + query
-  5. Return answer with sources
-- **Output**: Answer + text sources
-
-#### 4.2 Multi-Modal RAG (`multimodal_rag_pipeline.py`)
-- **Input**: User query (string)
-- **Configuration**:
-  - k_text: 5 (retrieve 5 text chunks)
-  - k_images: 3 (retrieve 3 images)
-- **Process**:
 ```python
-  # Parallel retrieval
-  text_results = search_text(query, k=5)
-  image_results = search_images(query, k=3)
-  
-  # Context assembly with citations
-  context = format_with_citations(text_results)
-  
-  # LLM synthesis
-  prompt = build_enhanced_prompt(query, context)
-  answer = gpt35_turbo(prompt, max_tokens=800)
-  
-  # Return comprehensive result
-  return {
-      "answer": answer,
-      "text_sources": text_results,
-      "image_sources": image_results,
-      "metadata": {tokens, cost, latency}
-  }
-```
-- **Output**: Answer + text sources + image sources + metadata
-
-**Enhanced Prompt Structure:**
-```
-System: "You are an expert AI research assistant..."
-
-User: """
-Based on the following 5 sources, provide a comprehensive answer...
-
-Guidelines:
-- Synthesize ALL sources into 2-4 paragraphs
-- Include technical details
-- Cite sources by number [Source N]
-- Acknowledge conflicts if any
-
-Question: {query}
-
-Sources:
-[Source 1] Paper_Name.pdf (Page 3) | Relevance: 0.521
-{chunk_text_1}
-
-[Source 2] ...
-
-Provide detailed response:
-"""
+python src/download\_papers.py
 ```
 
-**Response Generation Parameters:**
-- Model: `gpt-3.5-turbo`
-- Temperature: 0.3 (balanced creativity/accuracy)
-- Max tokens: 800 (allows 2-4 paragraph responses)
-- Top-p: 1.0 (no nucleus sampling)
+### Stage 2: PDF Processing
 
----
+Raw PDFs are processed with PyMuPDF to extract both text content and embedded figures.
 
-### 5. Web Interface (`web_ui.py` + `streamlit_app.py`)
+Text extraction handles UTF-8 encoding with error recovery and pulls paper-level metadata including title, authors, and publication year. Image extraction filters figures by minimum dimensions (100x100 pixels) and saves them as PNG files with positional metadata recording the source paper and page number.
 
-**Framework**: Streamlit 1.31.0
+Output:
 
-**Layout**:
+* `extracted\_text.json` — 17 MB, full text for all 258 papers
+* `images/` folder — 6,591 PNG files (not committed to GitHub, over 400 MB)
+
+### Stage 3: Text Chunking
+
 ```
-┌─────────────────────────────────────────┐
-│  PaperMind: AI Research Assistant    │
-├─────────────────────────────────────────┤
-│  [Text Input: "What is..."]      [Ask]  │
-│                                         │
-│  Example Questions: [Button] [Button]   │
-├─────────────────────────────────────────┤
-│  Answer (2-4 paragraphs)             │
-│  "The transformer architecture uses..." │
-│  [Source 1] [Source 2] ...              │
-├─────────────────────────────────────────┤
-│  View Sources (Expandable)           │
-│  ├─ [Source 1] Paper.pdf (Page 3)       │
-│  │   Chunk text preview...              │
-│  ├─ [Source 2] ...                      │
-├─────────────────────────────────────────┤
-│  Figure Sources (Image Gallery)      │
-│  [Image 1] [Image 2] [Image 3]          │
-│  Score: 0.45  Score: 0.42  Score: 0.39  │
-├─────────────────────────────────────────┤
-│  Metadata                             │
-│  Latency: 3.2s | Tokens: 3,019          │
-│  Cost: $0.006 | Model: gpt-3.5-turbo    │
-└─────────────────────────────────────────┘
+Raw Text -> LangChain RecursiveCharacterTextSplitter -> 512-token chunks
 ```
 
-**Key Features**:
-- Responsive design (works on mobile)
-- Real-time streaming responses (future)
-- Expandable source viewer
-- Image gallery with similarity scores
-- Performance metrics display
+The recursive splitter respects semantic boundaries by splitting on paragraphs first, then sentences, then words, then characters as a last resort. This produces more coherent chunks than fixed-size splitting.
 
-**Path Handling (Cross-Platform)**:
+Parameters:
+
+* Target chunk size: 512 tokens (GPT-3.5 tokenizer)
+* Overlap: 102 tokens (20%) for continuity across chunk boundaries
+* Average output: 45 chunks per paper
+
+Output: `chunks\_recursive\_512.json` — 23 MB, 11,787 chunks total
+
+### Stage 4: Embedding Generation
+
+**Text Embeddings**
+
 ```python
-# Convert Windows paths to POSIX for Streamlit Cloud
-image_path_str = img['path'].replace('\\', '/')
-image_path = Path(image_path_str)
-
-# Make absolute if relative
-if not image_path.is_absolute():
-    project_root = Path.cwd()
-    image_path = project_root / image_path
+model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+embeddings = model.encode(chunks)  # shape: (11787, 384)
 ```
 
----
+all-MiniLM-L6-v2 was chosen for its balance of speed, model size, and retrieval quality. It processes approximately 70 chunks per second on CPU, has an 80 MB footprint, and produces 384-dimensional vectors that perform well on semantic similarity tasks.
 
-## Evaluation Framework
+**Image Embeddings**
 
-### RAGAS Metrics (`evaluate_with_ragas.py`)
+```python
+model = CLIPModel.from\_pretrained("openai/clip-vit-base-patch32")
+embeddings = model.encode\_image(images)  # shape: (6591, 512)
+```
 
-**Framework**: RAGAS v0.1.9 (Retrieval-Augmented Generation Assessment)
+CLIP ViT-B/32 is trained on aligned text-image pairs, which allows text queries to retrieve semantically relevant figures through cross-modal similarity. This is the key property that enables the system to find architecture diagrams, attention visualisations, and training curves in response to natural language queries.
 
-**Metrics Tracked**:
+**Storage Format**
 
-#### 1. Answer Relevancy (0.0 - 1.0)
-- **Measures**: How well the answer addresses the question
-- **Method**: Cosine similarity between question and answer embeddings
-- **Interpretation**:
-  - > 0.80: Excellent alignment
-  - 0.60-0.80: Good, minor tangents
-  - < 0.60: Answer doesn't fully address question
-- **Target**: > 0.80
+Both embedding matrices are saved as NumPy binary files (.npy). This format is approximately 9 times smaller than JSON for floating-point arrays:
 
-#### 2. Faithfulness (0.0 - 1.0)
-- **Measures**: Answer grounding in retrieved context (hallucination detection)
-- **Method**: NLI (Natural Language Inference) model checks if answer claims are entailed by context
-- **Interpretation**:
-  - > 0.90: Highly faithful, no hallucinations
-  - 0.70-0.90: Mostly faithful, minor extrapolations
-  - < 0.70: Contains unsupported claims
-- **Target**: > 0.90
+* `embeddings\_512.npy` — 5 MB (equivalent JSON would be \~45 MB)
+* `image\_embeddings.npy` — 13 MB (equivalent JSON would be \~120 MB)
 
-#### 3. Context Precision (0.0 - 1.0)
-- **Measures**: Relevance of retrieved chunks to the question
-- **Method**: Checks if ground truth answer is derivable from top-k chunks
-- **Interpretation**:
-  - > 0.70: Most chunks are relevant
-  - 0.50-0.70: Mixed relevance
-  - < 0.50: Many irrelevant chunks retrieved
-- **Target**: > 0.70
+### Stage 5: Index Construction
 
-#### 4. Context Recall (0.0 - 1.0)
-- **Measures**: Completeness - did retrieval capture all necessary information?
-- **Method**: Checks if all ground truth facts appear in retrieved context
-- **Interpretation**:
-  - > 0.75: Complete information retrieved
-  - 0.50-0.75: Some gaps in coverage
-  - < 0.50: Missing key information
-- **Target**: > 0.75
+```python
+index = faiss.IndexFlatL2(embedding\_dim)
+index.add(embeddings)
+faiss.write\_index(index, "faiss\_index.bin")
+```
 
-**Test Suite**:
-- **Size**: 10 diverse queries
-- **Categories**:
-  - Architecture questions (3)
-  - Component questions (3)
-  - Comparison questions (2)
-  - Limitation questions (2)
-- **Ground Truth**: Manually curated expected answers
-- **Execution**: `python src/evaluate_with_ragas.py`
-- **Results**: Saved to `data/evaluation/ragas_results.json`
+IndexFlatL2 performs exact nearest-neighbour search using L2 (Euclidean) distance. It requires no training, guarantees 100% recall, and runs under 10ms for the corpus sizes used here. A more complex index type such as IndexIVFFlat would only be necessary beyond approximately 100,000 vectors.
 
----
+Output:
+
+* `faiss\_index/` — 20 MB, text search index
+* `faiss\_image\_index/` — 15 MB, image search index
+
+\---
+
+## Retrieval System
+
+### Text Retrieval
+
+```python
+def retrieve\_text(query: str, k: int = 5) -> List\[Dict]:
+    query\_embedding = text\_model.encode(\[query])\[0]
+    query\_vector = query\_embedding.astype('float32').reshape(1, -1)
+
+    distances, indices = text\_index.search(query\_vector, k)
+
+    results = \[]
+    for dist, idx in zip(distances\[0], indices\[0]):
+        chunk = text\_metadata\[idx]
+        similarity = 1 / (1 + dist)  # Convert L2 distance to similarity score
+        results.append({...})
+
+    return results
+```
+
+Search time is under 10ms for 11,787 vectors. The L2 distance is converted to a similarity score in the range (0, 1] for display purposes.
+
+### Image Retrieval
+
+```python
+def retrieve\_images(query: str, k: int = 3) -> List\[Dict]:
+    inputs = clip\_processor(text=\[query], return\_tensors="pt", padding=True)
+    text\_embeds = clip\_model.get\_text\_features(\*\*inputs)
+    text\_embeds = F.normalize(text\_embeds, p=2, dim=1)
+
+    distances, indices = image\_index.search(text\_embeds.numpy(), k)
+    ...
+```
+
+The text query is encoded using CLIP's text encoder and normalised before searching the image index. This cross-modal search is what allows a query like "show me attention visualisations" to retrieve relevant figures even though no text describes those figures in the index.
+
+### Auto-tuned Retrieval Parameters
+
+Rather than using fixed k values for all queries, the system classifies each query and adjusts retrieval parameters accordingly:
+
+```python
+def get\_retrieval\_params(query: str) -> tuple:
+    # Visual queries: fewer text chunks, more figure references
+    visual\_keywords = \['show', 'diagram', 'figure', 'visualiz', 'image', 'graph', 'chart']
+    if any(kw in query.lower() for kw in visual\_keywords):
+        return (k\_text=4, k\_images=5)
+
+    # Complex or comparative queries: more text sources
+    complex\_keywords = \['compare', 'difference', 'vs', 'explain', 'comprehensive', 'analyze']
+    if word\_count > 15 or any(kw in query.lower() for kw in complex\_keywords):
+        return (k\_text=7, k\_images=3)
+
+    # Default: balanced
+    return (k\_text=5, k\_images=3)
+```
+
+Advanced Mode in the sidebar allows manual override of these parameters.
+
+\---
+
+## Generation Pipeline
+
+### Context Assembly
+
+Retrieved results are formatted into a structured context block with numbered citations:
+
+```
+\[Source 1] attention\_is\_all\_you\_need.pdf | Chunk 14 | Relevance: 0.821
+The dominant sequence transduction models are based on complex recurrent...
+
+\[Source 2] bert\_pretraining.pdf | Chunk 3 | Relevance: 0.774
+...
+
+\[Figure 1] attention\_is\_all\_you\_need.pdf, Page 3, Score: 0.643
+\[Figure 2] vision\_transformer.pdf, Page 7, Score: 0.591
+```
+
+### Prompt Design
+
+The system prompt establishes the LLM as a specialist research assistant with access to both text excerpts and figure metadata. The user prompt provides the question, the assembled context, and explicit instructions to synthesise across sources, use 2-4 paragraphs, and cite sources by number.
+
+Temperature is set to 0.3 — low enough for factual accuracy while allowing natural phrasing. Max tokens is set to 800, sufficient for approximately 600 words of output.
+
+### Cost Breakdown
+
+Each query consumes approximately:
+
+* Input: \~2,000 tokens ($0.001 at GPT-3.5-turbo rates)
+* Output: \~400 tokens ($0.0006)
+* Total: \~$0.006 per query
+
+\---
+
+## Deployment Architecture
+
+### Local Development
+
+```
+Windows Machine
+├── Python 3.11
+├── Virtual environment (venv/)
+├── All dependencies installed from requirements.txt
+└── .streamlit/secrets.toml (API key, gitignored)
+```
+
+### Streamlit Cloud Production
+
+```
+Streamlit Cloud (Free Tier)
+├── OS: Ubuntu 20.04
+├── Python: 3.11.15
+├── RAM: 1 GB
+├── CPU: Shared
+├── Secrets: OPENAI\_API\_KEY via dashboard
+└── Auto-deploys on push to main branch
+```
+
+### Repository Size Management
+
+The raw project data exceeds 600 MB. The GitHub repository must stay under 100 MB. This was achieved by:
+
+* Not committing PDF files (\~500 MB) — regenerate locally if needed
+* Not committing extracted image files (\~400 MB) — regenerate locally if needed
+* Not committing JSON embedding files (\~215 MB) — replaced by .npy equivalents
+* Committing only pre-generated .npy embeddings and FAISS indexes
+
+Final repository size: 93 MB
+
+Files committed to GitHub:
+
+|File|Size|Purpose|
+|-|-|-|
+|embeddings\_512.npy|5 MB|Text embeddings|
+|image\_embeddings.npy|13 MB|Image embeddings|
+|chunks\_recursive\_512.json|23 MB|Text chunks and metadata|
+|extracted\_text.json|17 MB|Raw paper text|
+|faiss\_index/|20 MB|Text search index|
+|faiss\_image\_index/|15 MB|Image search index|
+
+### Cold Start Behaviour
+
+First deployment after a push:
+
+1. Repository clone: \~30 seconds
+2. Dependency installation: \~2 minutes
+3. FAISS index loading: \~5 seconds
+4. Embedding model loading: \~10 seconds
+5. OpenAI client initialisation: \~1 second
+
+Total cold start: approximately 3 minutes. Subsequent warm starts complete in under 5 seconds as Streamlit Cloud keeps active apps in memory.
+
+### API Key Loading
+
+The pipeline uses a three-stage fallback for API key resolution, supporting both cloud and local environments without code changes:
+
+```python
+def \_load\_api\_key(self):
+    # Stage 1: Streamlit secrets (Streamlit Cloud deployment)
+    try:
+        if "OPENAI\_API\_KEY" in st.secrets:
+            self.api\_key = st.secrets\["OPENAI\_API\_KEY"].strip()
+            return
+    except Exception:
+        pass
+
+    # Stage 2: Environment variable (CI/CD or shell export)
+    api\_key = os.getenv("OPENAI\_API\_KEY")
+    if api\_key:
+        self.api\_key = api\_key.strip()
+        return
+
+    # Stage 3: .env file (local development fallback)
+    load\_dotenv()
+    api\_key = os.getenv("OPENAI\_API\_KEY")
+    if api\_key:
+        self.api\_key = api\_key.strip()
+        return
+
+    raise ValueError("OPENAI\_API\_KEY not found in secrets, environment, or .env file")
+```
+
+\---
+
+## Key Design Decisions
+
+### FAISS over Cloud Vector Databases
+
+Pinecone and Weaviate offer managed vector search with horizontal scaling, but introduce external API dependencies, monthly costs, and network latency on every query. For a corpus of 258 papers and approximately 18,000 total vectors, FAISS IndexFlatL2 delivers exact search in under 10ms with zero operational overhead. The break-even point where a cloud vector database becomes preferable is around 1 million vectors or when distributed search across multiple machines is required.
+
+### GPT-3.5-turbo over GPT-4o
+
+In a RAG system the retrieval step supplies the factual content. The LLM's role is synthesis and articulation, not knowledge recall. GPT-3.5-turbo handles this at one-tenth the cost ($0.006 vs approximately $0.06 per query) and roughly three times the speed of GPT-4o. The correct investment to improve answer quality is improving retrieval precision through reranking or hybrid search, not upgrading the LLM.
+
+### Pre-generated Embeddings
+
+Streamlit Cloud's free tier cannot sustain the CPU load required to generate 11,787 text embeddings and 6,591 image embeddings at startup. Attempting this caused the account to be blocked for exceeding fair-use CPU limits. The solution is to generate all embeddings locally once, commit the .npy files, and load them at startup. This also reduces startup time from over 10 minutes to under 15 seconds and produces consistent, reproducible embeddings.
+
+### Recursive over Fixed-Size Chunking
+
+Fixed-size chunking splits text at arbitrary character boundaries, frequently cutting sentences or paragraphs mid-way. LangChain's RecursiveCharacterTextSplitter tries paragraph boundaries first, falling back to sentence, word, and character boundaries only when necessary. This produces chunks with more complete semantic units, which improves retrieval coherence. The 20% overlap between chunks ensures that information near chunk boundaries is not lost.
+
+### Text-only Display with Multimodal Retrieval
+
+The system retrieves and scores both text chunks and figures in every query. The LLM references figures in its answers using \[Figure N] citations. However, the extracted figure PNG files are not committed to GitHub due to size constraints, so images cannot be rendered in the UI. This is a deployment constraint rather than an architectural one. The multimodal retrieval capability is fully functional and would support image display if the figures were hosted on external storage such as AWS S3 or Cloudinary.
+
+\---
 
 ## Performance Characteristics
 
-### Corpus Statistics (Current)
-- **Papers**: 200+ research papers
-- **Text Chunks**: ~10,000 chunks (512 tokens each)
-- **Images**: ~5,000 figures and diagrams
-- **Total Embeddings**: ~50 MB (text + image)
-- **Index Size**: ~150 MB (FAISS indexes + metadata)
+### Latency Breakdown
 
-### Retrieval Performance
-- **Text Search Latency**: ~50ms (P50), ~120ms (P95)
-- **Image Search Latency**: ~30ms (P50), ~80ms (P95)
-- **Text Retrieval Precision@5**: 35%
-- **Image Retrieval Precision@3**: 28%
-- **Top-1 Text Relevance**: 0.539 (cosine similarity)
-- **Top-1 Image Relevance**: 0.451 (cosine similarity)
+```
+Total query time: approximately 3.0 seconds
 
-### Response Generation
-- **End-to-End Latency**: 3.5s (P50), 5.2s (P95)
-  - Text search: 0.2s
-  - Image search: 0.3s
-  - LLM generation: 3.0s
-- **Cost Per Query**: $0.006 USD (GPT-3.5-turbo)
-  - Input tokens: ~2,500 (context)
-  - Output tokens: ~500 (answer)
-- **Throughput**: ~17 queries/minute (with rate limiting)
+  Text retrieval (FAISS):     0.01s
+  Image retrieval (FAISS):    0.02s
+  Context assembly:           0.01s
+  LLM generation (OpenAI):    2.96s
+```
 
-### System Resources
-- **RAM Usage**: ~2 GB (models loaded)
-- **Disk Space**: ~500 MB (full system)
-- **GPU**: Optional (10x faster embedding generation)
+The LLM API call accounts for 98% of total latency. FAISS search is effectively instantaneous at this corpus size. Reducing latency further would require either caching frequent queries or switching to a faster model.
 
----
+### Scalability Limits
 
-## Trade-offs & Limitations
+|Dimension|Current|Estimated Maximum (IndexFlatL2)|
+|-|-|-|
+|Papers|258|\~1,500|
+|Text chunks|11,787|\~100,000|
+|Image embeddings|6,591|\~100,000|
 
-### Current Limitations
+Beyond approximately 100,000 vectors, IndexFlatL2 search time grows linearly and IndexIVFFlat should be used instead. IndexIVFFlat uses approximate nearest-neighbour search with clustering, maintaining fast query times at the cost of a small reduction in recall.
 
-#### 1. Document Coverage
-- **Not handling**: Scanned PDFs without text layer
-  - **Future**: Add Tesseract OCR for scanned documents
-- **Not handling**: Tables and equations
-  - **Future**: Table extraction with camelot/tabula
-  - **Future**: LaTeX equation parsing
-- **Language**: English-only
-  - **Future**: Multilingual models (mBERT, XLM-R)
-
-#### 2. Retrieval Quality
-- **No reranking**: Top-k results may include some irrelevant chunks
-  - **Future**: Add cross-encoder reranking
-- **No diversity**: Results can be redundant (multiple chunks from same paper)
-  - **Future**: Implement MMR (Maximal Marginal Relevance)
-- **Fixed k**: Always retrieves k=5 text, k=3 images
-  - **Future**: Adaptive retrieval based on query complexity
-
-#### 3. Response Generation
-- **No conversation memory**: Each query is independent
-  - **Future**: Add session state for multi-turn conversations
-- **No streaming**: User waits 3-5 seconds for full response
-  - **Future**: Stream GPT tokens in real-time
-- **Single model**: Only GPT-3.5-turbo
-  - **Future**: Support GPT-4, Claude, or local models
-
-#### 4. Scalability
-- **Corpus size**: Limited to ~200 papers (~10K chunks) for fast exact search
-  - **Future**: Switch to IndexIVFFlat or IndexHNSW for 100K+ chunks
-- **Memory**: All embeddings loaded in RAM
-  - **Future**: Memory-mapped indexes for large-scale deployment
-- **Single-node**: No distributed search
-  - **Future**: Distributed FAISS or Pinecone/Weaviate
-
-### Design Trade-offs
-
-#### Trade-off 1: Exact vs. Approximate Search
-**Choice**: IndexFlatL2 (exact search)
-- **Pros**: Perfect recall, deterministic, no parameter tuning
-- **Cons**: Doesn't scale beyond 100K vectors
-- **Rationale**: 10K chunks is small enough for exact search; prioritize quality over speed
-
-#### Trade-off 2: Chunk Size
-**Choice**: 512 tokens with 20% overlap
-- **Pros**: Fits embedding model context, preserves semantic units
-- **Cons**: Longer chunks may dilute relevance signal
-- **Rationale**: Academic papers have dense technical content; larger chunks provide better context
-
-#### Trade-off 3: LLM Selection
-**Choice**: GPT-3.5-turbo over GPT-4
-- **Pros**: 10x cheaper, 2x faster, good quality for synthesis tasks
-- **Cons**: Lower reasoning capability for complex questions
-- **Rationale**: Most queries are factual retrieval, not complex reasoning; cost/latency matter
-
-#### Trade-off 4: Deployment Platform
-**Choice**: Streamlit Cloud (free tier)
-- **Pros**: Zero-cost hosting, auto-deployment from GitHub, easy setup
-- **Cons**: 1GB RAM limit, shared CPU, cold starts
-- **Rationale**: Student project; free tier sufficient for demo/portfolio
-
----
+\---
 
 ## Future Architecture Improvements
 
-### Phase 1: Quality (Weeks 5-8)
-1. **Hybrid Search**: Combine dense (FAISS) + sparse (BM25) retrieval
-2. **Reranking**: Add cross-encoder for top-k refinement
-3. **Query Expansion**: Generate multiple query variants for better coverage
-4. **Citation Extraction**: Parse and link to specific paper sections
+### Reranking Layer
 
-### Phase 2: Scalability (Weeks 9-12)
-1. **Index Optimization**: Switch to IndexIVFFlat for 100K+ chunks
-2. **Caching**: Cache frequent queries (Redis)
-3. **Async Processing**: Parallel embedding generation
-4. **Batch Endpoints**: Process multiple queries efficiently
+Initial retrieval with a bi-encoder (the current approach) is fast but imprecise. A cross-encoder reranker takes the query and each candidate chunk as a pair and produces a more accurate relevance score. The typical pattern is to retrieve k=20 candidates with FAISS, then rerank to the top 5 with a cross-encoder.
 
-### Phase 3: Features (Weeks 13-16)
-1. **Conversation Memory**: Multi-turn dialogue with context
-2. **Streaming Responses**: Real-time token streaming
-3. **Paper Upload**: User-uploaded PDFs
-4. **Advanced Filters**: Filter by author, year, paper type
+Estimated precision improvement: +10-12%
 
-### Phase 4: Production (Optional)
-1. **Monitoring**: Prometheus + Grafana dashboards
-2. **A/B Testing**: Test different retrieval strategies
-3. **User Feedback Loop**: Thumbs up/down for answer quality
-4. **API**: REST API for programmatic access
+### Hybrid Search
 
----
+Dense retrieval with sentence embeddings captures semantic similarity but can miss exact keyword matches, particularly for model names, paper titles, and technical terms. BM25 is a classical sparse retrieval method that excels at keyword matching. Combining both with a weighted merge (Reciprocal Rank Fusion is a common approach) captures the strengths of both.
 
-## 🛠️ Tech Stack Summary
+Estimated precision improvement: +8-12%
 
-| Component | Technology | Version | Rationale |
-|-----------|-----------|---------|-----------|
-| **Embedding (Text)** | all-MiniLM-L6-v2 | - | Fast, accurate, 384-dim |
-| **Embedding (Image)** | CLIP ViT-B/32 | - | Text-image alignment |
-| **Vector DB** | FAISS | 1.7.4 | Fast exact search |
-| **LLM** | GPT-3.5-turbo | - | Cost-effective synthesis |
-| **Web Framework** | Streamlit | 1.31.0 | Rapid prototyping |
-| **PDF Processing** | PyMuPDF | 1.23.26 | Fast, accurate |
-| **Chunking** | LangChain | - | Semantic-aware splitting |
-| **Evaluation** | RAGAS | 0.1.9 | RAG-specific metrics |
-| **Deployment** | Streamlit Cloud | - | Free, auto-deploy |
+### Query Expansion
 
----
+A single query may not cover all relevant phrasings of a topic. Query expansion generates two or three semantically distinct variants of the original query using the LLM, runs retrieval for each, and merges the result sets before reranking.
 
-## File Structure
-```
-PaperMind/
-├── data/
-│   ├── papers/              # PDF files (gitignored if > 50MB)
-│   ├── processed/
-│   │   ├── extracted_text.json
-│   │   ├── chunks_recursive_512.json
-│   │   ├── embeddings_512.npy
-│   │   ├── image_embeddings.npy
-│   │   ├── images_metadata.json
-│   │   ├── papers_metadata.json
-│   │   ├── images/          # ~5,000 PNG files
-│   │   ├── faiss_index/
-│   │   │   ├── faiss_index.bin
-│   │   │   └── chunks_metadata.pkl
-│   │   └── faiss_image_index/
-│   │       ├── faiss_image_index.bin
-│   │       └── images_metadata.pkl
-│   └── evaluation/
-│       ├── test_queries.json
-│       ├── results.json
-│       └── ragas_results.json
-├── src/
-│   ├── download_papers.py
-│   ├── download_more_papers.py
-│   ├── pdf_extractor.py
-│   ├── text_chunker.py
-│   ├── extract_images.py
-│   ├── generate_embeddings.py
-│   ├── generate_image_embeddings.py
-│   ├── build_faiss_index.py
-│   ├── build_image_faiss_index.py
-│   ├── rag_pipeline.py
-│   ├── multimodal_rag_pipeline.py
-│   ├── web_ui.py
-│   ├── evaluate_system.py
-│   └── evaluate_with_ragas.py
-├── .streamlit/
-│   ├── config.toml           # UI settings (safe to commit)
-│   └── secrets.toml          # API keys (gitignored)
-├── streamlit_app.py          # Entry point
-├── requirements.txt
-├── .gitignore
-├── .env                      # Local API keys (gitignored)
-├── README.md
-├── DEVLOG.md
-├── ARCHITECTURE.md           # This file
-└── DEPLOYMENT.md
-```
+Estimated recall improvement: +5-10%
 
----
+### Agentic Retrieval
 
-## Security Architecture
+Rather than using fixed retrieval parameters, an agent-based approach would allow the LLM to decide whether to retrieve more text, more figures, or to issue a follow-up retrieval query based on initial results. This is sometimes called iterative or self-reflective RAG.
 
-### Secrets Management
-- **Local Development**: `.env` file (gitignored)
-- **Production**: Streamlit Cloud Secrets (encrypted)
-- **Never committed**: API keys, credentials, tokens
+\---
 
-### API Key Rotation
-- **Frequency**: Quarterly or after any leak
-- **Process**: 
-  1. Generate new key in OpenAI dashboard
-  2. Update `.env` locally
-  3. Update Streamlit Cloud secrets
-  4. Revoke old key
-  5. Test deployment
+Last updated: April 4, 2026
+Author: Pieter Deliho
+Project: PaperMind Multi-Modal RAG System
 
-### Rate Limiting
-- **OpenAI API**: Tier-based (default: 3,500 RPM)
-- **Internal**: None (future: add rate limiting for public deployment)
-
----
-
-## Monitoring & Observability
-
-### Metrics Collected
-- Query latency (P50, P95, P99)
-- Token usage (prompt + completion)
-- Cost per query
-- Error rates
-- User satisfaction (future)
-- Retrieval quality drift (future)
-
-### Logging
-- **Level**: INFO (shows all queries + latency)
-- **Format**: Timestamp + query + metrics
-- **Storage**: Streamlit Cloud logs (7-day retention)
-
-### Alerting (Future)
-- High error rate (> 5%)
-- High latency (P95 > 10s)
-- High cost (> $1/hour)
-- API quota exceeded
-
----
-
-## Success Criteria
-
-### Technical Metrics
-- Retrieval Precision@5: > 35% (current: 35%)
-- End-to-end Latency: < 5s (current: 3.5s)
-- Answer Relevancy (RAGAS): > 0.80 (TBD)
-- Faithfulness (RAGAS): > 0.90 (TBD)
-- Uptime: > 95% (Streamlit Cloud handles this)
-
-### User Experience
-- Works on mobile + desktop
-- Images render correctly
-- Sources are verifiable (page numbers shown)
-- Fast enough for interactive use (< 5s)
-
-### Portfolio Value
-- Live demo URL
-- Clean GitHub repo with documentation
-- Quantitative evaluation results
-- Technical depth (multi-modal RAG, RAGAS)
-- Production deployment experience
-
----
-
-*Last Updated: March 15, 2026 (Day 16)*
-*Next Review: March 22, 2026 (after corpus expansion)*
