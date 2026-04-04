@@ -64,10 +64,8 @@ class MultiModalRAG:
         print("  Loading embedding models...")
         self.text_embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
-        self.clip_model = CLIPModel.from_pretrained(
-            "openai/clip-vit-base-patch32",
-            torch_dtype=torch.float16
-        )
+        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+        self.clip_model.eval()
         self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
         self.clip_tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
 
