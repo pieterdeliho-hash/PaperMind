@@ -330,7 +330,7 @@ def run_app():
         ↓                        ↓
     [FAISS Text Search]  [FAISS Image Search]
         ↓                        ↓
-    [Top 3 chunks]       [Top 2 images]
+    [Top 5 chunks]       [Top 3 images]
         ↓________________________↓
                   ↓
         [Context Assembly] 
