@@ -72,9 +72,13 @@ def run_app():
     """, unsafe_allow_html=True)
 
     # Initialize session state
+    @st.cache_resource
+    def load_rag():
+        return MultiModalRAG()
+
     if 'rag' not in st.session_state:
         with st.spinner("Loading PaperMind... (this takes ~10 seconds)"):
-            st.session_state.rag = MultiModalRAG()
+            st.session_state.rag = load_rag()
 
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
