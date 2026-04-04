@@ -291,9 +291,9 @@ def run_app():
         with col1:
             st.markdown("### 1️ Document Processing")
             st.markdown("""
-            - **57 research papers** from ArXiv
-            - **3,431 text chunks** (512 tokens each)
-            - **2,655 images** extracted from papers
+            - **200+ research papers** from ArXiv
+            - **11,780 text chunks** (512 tokens each)
+            - **6,591 images** extracted from papers
             - Recursive character splitting for optimal chunking
             """)
 
