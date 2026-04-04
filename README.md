@@ -135,7 +135,7 @@ cd PaperMind
 
 # Create and activate virtual environment
 python -m venv venv
-venv\\Scripts\\activate        # Windows
+venv\\\\\\\\Scripts\\\\\\\\activate        # Windows
 source venv/bin/activate     # Mac/Linux
 
 # Install dependencies
@@ -147,13 +147,13 @@ pip install -r requirements.txt
 Create `.streamlit/secrets.toml` with your OpenAI API key:
 
 ```toml
-OPENAI\_API\_KEY = "key-here"
+OPENAI\\\\\\\_API\\\\\\\_KEY = "key-here"
 ```
 
 **Run the application:**
 
 ```bash
-streamlit run streamlit\_app.py
+streamlit run streamlit\\\\\\\_app.py
 ```
 
 \---
@@ -163,24 +163,24 @@ streamlit run streamlit\_app.py
 ```
 PaperMind/
 ├── src/
-│   ├── multimodal\_rag\_pipeline.py   # Core RAG system
-│   ├── web\_ui.py                    # Streamlit interface
-│   ├── pdf\_extractor.py             # PDF processing
-│   ├── text\_chunker.py              # Text chunking
-│   ├── generate\_embeddings.py       # Text embedding generation
-│   ├── generate\_image\_embeddings.py # Image embedding generation
-│   ├── build\_faiss\_index.py         # FAISS text index builder
-│   └── build\_image\_faiss\_index.py   # FAISS image index builder
+│   ├── multimodal\\\\\\\_rag\\\\\\\_pipeline.py   # Core RAG system
+│   ├── web\\\\\\\_ui.py                    # Streamlit interface
+│   ├── pdf\\\\\\\_extractor.py             # PDF processing
+│   ├── text\\\\\\\_chunker.py              # Text chunking
+│   ├── generate\\\\\\\_embeddings.py       # Text embedding generation
+│   ├── generate\\\\\\\_image\\\\\\\_embeddings.py # Image embedding generation
+│   ├── build\\\\\\\_faiss\\\\\\\_index.py         # FAISS text index builder
+│   └── build\\\\\\\_image\\\\\\\_faiss\\\\\\\_index.py   # FAISS image index builder
 ├── data/processed/
-│   ├── embeddings\_512.npy           # Pre-generated text embeddings (5 MB)
-│   ├── image\_embeddings.npy         # Pre-generated image embeddings (13 MB)
-│   ├── chunks\_recursive\_512.json    # Text chunks with metadata (23 MB)
-│   ├── extracted\_text.json          # Raw extracted paper text (17 MB)
-│   ├── faiss\_index/                 # FAISS text search index (20 MB)
-│   └── faiss\_image\_index/           # FAISS image search index (15 MB)
+│   ├── embeddings\\\\\\\_512.npy           # Pre-generated text embeddings (5 MB)
+│   ├── image\\\\\\\_embeddings.npy         # Pre-generated image embeddings (13 MB)
+│   ├── chunks\\\\\\\_recursive\\\\\\\_512.json    # Text chunks with metadata (23 MB)
+│   ├── extracted\\\\\\\_text.json          # Raw extracted paper text (17 MB)
+│   ├── faiss\\\\\\\_index/                 # FAISS text search index (20 MB)
+│   └── faiss\\\\\\\_image\\\\\\\_index/           # FAISS image search index (15 MB)
 ├── docs/
 │   └── screenshots/                 # UI screenshots for documentation
-├── streamlit\_app.py                 # Application entry point
+├── streamlit\\\\\\\_app.py                 # Application entry point
 ├── requirements.txt                 # Pinned Python dependencies
 ├── ARCHITECTURE.md                  # System architecture deep-dive
 ├── DEVLOG.md                        # Development log and journey
@@ -212,7 +212,6 @@ The system retrieves and scores both text chunks and figures, and the LLM refere
 * **Query Expansion**: Generate multiple query variants and merge results
 * **GPT-4o Upgrade**: Higher answer quality for complex multi-paper synthesis
 * **Corpus Expansion**: Scale to 1,000+ papers with IndexIVFFlat for faster search
-* **Image Display**: Serve extracted figures from cloud storage and render them in the UI
 
 \---
 
