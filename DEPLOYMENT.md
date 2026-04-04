@@ -4,7 +4,7 @@
 
 \## Live Production Instance
 
-\*\*URL\*\*: https://papermind-ai-research-assistant.streamlit.app
+\*\*URL\*\*: https://papermind-ai-assistant.streamlit.app
 
 
 
@@ -232,23 +232,7 @@ httpx==0.27.2
 
 
 
-\### Issue 2: Image Path Not Found
-
-\*\*Symptom\*\*: `Image not found: /mount/src/papermind/...`
-
-
-
-\*\*Fix\*\*: Use POSIX paths in `web\_ui.py`:
-
-```python
-
-image\_path\_str = img\['path'].replace('\\\\', '/')
-
-```
-
-
-
-\### Issue 3: Missing Secrets
+\### Issue 2: Missing Secrets
 
 \*\*Symptom\*\*: `OpenAI API key not found`
 
